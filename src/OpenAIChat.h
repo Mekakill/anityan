@@ -1,8 +1,11 @@
 #pragma once
+#include <valarray>
+
 #include "AUI/Image/AImage.h"
 #include "AUI/Json/AJson.h"
 #include "AUI/Thread/AFuture.h"
 #include "AUI/Util/APreprocessor.h"
+#include "config.h"
 
 struct OpenAIChat {
     AString systemPrompt;
@@ -57,6 +60,8 @@ struct OpenAIChat {
 
     AFuture<Response> chat(AString message);
     AFuture<Response> chat(AVector<Message> messages);
+
+    AFuture<std::valarray<float>> embedding(AString input, AStringView embeddingModel = config::MODEL_EMBEDDING);
 };
 
 template<>
