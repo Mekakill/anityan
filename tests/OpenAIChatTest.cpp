@@ -145,8 +145,7 @@ TEST(OpenAIChat, ImageRecognition) {
         AVector<OpenAIChat::Message> messages = {
             {
                 .role = OpenAIChat::Message::Role::USER,
-                .content = "What is it?",
-                .attachments = { AImage::fromFile(TEST_DATA / "sussybaka.jpg") },
+                .content = "{}\nWhat is it?"_format(OpenAIChat::embedImage(*AImage::fromFile(TEST_DATA / "sussybaka.jpg") )),
             },
         };
         auto response = co_await session.chat(messages);

@@ -55,21 +55,28 @@ AppBase::AppBase(): mWakeupTimer(_new<ATimer>(2h)) {
             self.mNotifications.pop();
             self.mTemporaryContext << OpenAIChat::Message{
                 .role = OpenAIChat::Message::Role::USER,
-                .content = {},
+                .content = std::move(notification.message),
             };
 
-            for (auto it = self.mCachedDiary->begin(); it != self.mCachedDiary->end();) {
-                if (!co_await self.diaryEntryIsRelatedToCurrentContext(*it)) {
-                    ++it;
-                    continue;
-                }
-                self.mTemporaryContext.last().content += "<your_diary_page additional_context just_for_reasoning no_plagiarism no_copy>\n" + *it + "\n</your_diary_page>\n";
-                it = self.mCachedDiary->erase(it);
-            }
-            self.mTemporaryContext.last().content += notification.message;
 
             bool pauseFlag = false;
             naxyi:
+            {
+                AString diary;
+                for (auto it = self.mCachedDiary->begin(); it != self.mCachedDiary->end();) {
+                    if (!co_await self.diaryEntryIsRelatedToCurrentContext(*it)) {
+                        ++it;
+                        continue;
+                    }
+                    diary += "<your_diary_page additional_context just_for_reasoning no_plagiarism no_copy>\n" + *it + "\n</your_diary_page>\n";
+                    it = self.mCachedDiary->erase(it);
+                }
+                if (!diary.empty()) {
+                    diary += self.mTemporaryContext.last().content;
+                    self.mTemporaryContext.last().content = std::move(diary);
+                }
+            }
+
             self.updateTools(notification.actions);
             auto escape = [&](OpenAITools::Ctx ctx) -> AFuture<AString> {
                 pauseFlag = true;

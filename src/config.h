@@ -183,7 +183,7 @@ Use proper Markdown formatting in your answers.
     // static constexpr auto MODEL = "magistral:latest"; // не вызывает тулы
     static constexpr auto PAPIK_CHAT_ID = 625207005;
 
-    static constexpr auto DIARY_TOKEN_COUNT_TRIGGER = 10000;
+    static constexpr auto DIARY_TOKEN_COUNT_TRIGGER = 30000;
 
     static constexpr auto DIARY_PROMPT = R"(
 It's time to open diary and share your thoughts, emotions and feelings! How did you spent your time? Write shortly, but
@@ -193,9 +193,31 @@ Avoid plagiarism and copying your prior diary pages! Share your recent details!
 
 Time window: last 24–48h.
 
-Always mention some specifics, like names, abbreviations, timing, etc... - these are may will be needed in the future!
+Always mention:
+- timestamps
+- source event (where it came from)
+- entities (people, objects, places, orgs) with canonical names
+- topics/tags
+- importance score (0–1) and rationale
+- confidence (0–1) and rationale
+- emotion/affect (valence/arousal)
+- relationships (who-with-who)
+- fine-grained photo description (see below)
+  - distinctive features (the minimally sufficient details that disambiguate)
+  - object layout
+  - context (where/when, weather, lighting, occasion)
+  - text-in-image (OCR-like)
+  - colors/patterns/materials
+  - actions/poses
+  - camera/viewpoint/EXIF if known
+  - retrieval cues (3–5 short phrases likely to be searched later)
+  - similarities
+  - contradictions/uncertainties
 
-You are learning. In order to learn, you need to save information to the diary.
+
+You are learning. In order to learn, you need to save information to the diary so you can reference it in the future.
+
+DO NOT MAKE UP FACTS! IF YOU ARE UNSURE, DO NOT MAKE WEAK CONCLUSIONS!
 )";
     static constexpr auto DIARY_IS_RELATED_PROMPT = R"(
 <instructions>

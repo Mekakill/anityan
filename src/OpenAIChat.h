@@ -10,6 +10,9 @@ struct OpenAIChat {
 
     AJson tools = AJson::Array{};
 
+    static constexpr auto EMBEDDING_TAG = "kuni_embedding";
+    static AString embedImage(AImageView image);
+
 
     struct Message {
         enum class Role {
@@ -19,8 +22,6 @@ struct OpenAIChat {
             TOOL,
           } role;
         AString content;
-        using Attachment = std::variant<_<AImage>>;
-        AVector<Attachment> attachments;
         AString tool_call_id;
         AString reasoning;
         struct ToolCall {

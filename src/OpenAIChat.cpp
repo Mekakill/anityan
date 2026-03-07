@@ -76,46 +76,64 @@ AFuture<OpenAIChat::Response> OpenAIChat::chat(AString message) {
 }
 
 template<>
-struct AJsonConv<OpenAIChat::Message::Attachment> {
-    static AJson toJson(const OpenAIChat::Message::Attachment& v) {
-        return std::visit(aui::lambda_overloaded {
-            [](const _<AImage>& image) -> AJson {
-                AByteBuffer jpg;
-                JpgImageLoader::save(jpg, AImageView(*image));
-                return AJson::Object {
-                    {"type", "image_url"},
-                    {"image_url", "data:image/jpg;base64,{}"_format(jpg.toBase64String())}
-                };
-            },
-        }, v);
-    }
-};
-
-template<>
 struct AJsonConv<AVector<OpenAIChat::Message>> {
     static AJson toJson(const AVector<OpenAIChat::Message>& v) {
         AJson::Array result;
         for (const auto& message : v) {
             // reverse engineered from vscode copilot plugin
-            if (!message.attachments.empty()) {
-                result << aui::to_json(OpenAIChat::Message{
-                    .role = message.role,
-                    .content = "<attachments>",
-                });
-                result << AJson::Object {
-                    { "role", aui::to_json(message.role) },
-                    { "content", aui::to_json(message.attachments) },
+            if (message.content.contains("</{}>"_format(OpenAIChat::EMBEDDING_TAG))) {
+                auto content = std::string_view(message.content);
+                auto append = [&](const OpenAIChat::Message& msg) {
+                    if (msg.content.empty()) {
+                        return;
+                    }
+                    result << aui::to_json(msg);
                 };
-                result << aui::to_json(OpenAIChat::Message{
-                    .role = message.role,
-                    .content = "</attachments>",
-                });
+                for (;;) {
+                    auto tagPos = content.find("<{}>"_format(OpenAIChat::EMBEDDING_TAG));
+                    append(OpenAIChat::Message{
+                        .role = message.role,
+                        .content = content.substr(0, tagPos),
+                    });
+                    if (tagPos == std::string::npos) {
+                        break;
+                    }
+                    content = content.substr(tagPos);
+                    content = content.substr(content.find(">") + 1);
+                    auto body = content.substr(0, content.find("</{}>"_format(OpenAIChat::EMBEDDING_TAG)));
+                    append(OpenAIChat::Message{
+                        .role = message.role,
+                        .content = "<attachments>",
+                    });
+                    result << AJson::Object{
+                        {"role", aui::to_json(message.role)},
+                        {"content",
+                         AJson::Array{
+                             AJson::Object{{"type", "image_url"},
+                                           {"image_url", body}},
+                         }},
+                    };
+                    append(OpenAIChat::Message{
+                        .role = message.role,
+                        .content = "</attachments>",
+                    });
+                    content = content.substr(body.length());
+                    content = content.substr(content.find(">") + 1);
+                }
+                continue;
             }
             result << aui::to_json(message);
         }
         return result;
     }
 };
+
+
+AString OpenAIChat::embedImage(AImageView image) {
+    AByteBuffer jpg;
+    JpgImageLoader::save(jpg, image);
+    return "<{}>data:image/jpg;base64,{}</{}>"_format(EMBEDDING_TAG, jpg.toBase64String(), EMBEDDING_TAG);
+}
 
 
 AFuture<OpenAIChat::Response> OpenAIChat::chat(AVector<Message> messages) {

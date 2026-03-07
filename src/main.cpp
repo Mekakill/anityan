@@ -1,4 +1,6 @@
 #include <range/v3/action/insert.hpp>
+#include <range/v3/algorithm/max_element.hpp>
+#include <range/v3/algorithm/min_element.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/view/transform.hpp>
@@ -93,7 +95,6 @@ namespace {
                         }
                         result += " />\n";
                     }
-                    ctx.tools = {}; // reset
                     co_return result;
                 },
             });
@@ -135,18 +136,16 @@ namespace {
                 td::td_api::make_object<td::td_api::getChat>(u.message_->chat_id_));
             auto notification = "<notification chat_id=\"{}\">\n"_format(chat->id_);;
             if (userId == u.message_->chat_id_) {
-                notification += "You received a direct message from {} (chat_id = {}):\n\n{}"_format(
-                    chat->title_, chat->id_, to_string(u.message_->content_));
+                notification += "You received a direct message from {} (chat_id = {})"_format(
+                    chat->title_, chat->id_);
             } else if (userId != 0) {
                 auto user =
                     co_await mTelegram->sendQueryWithResult(td::td_api::make_object<td::td_api::getUser>(userId));
-                notification += "{} {} (user_id = {}) sent a message in group chat \"{}\" (chat_id = {}):\n\n{}"_format(
-                    user->first_name_, user->last_name_, userId, chat->title_, chat->id_,
-                    to_string(u.message_->content_));
+                notification += "{} {} (user_id = {}) sent a message in group chat \"{}\" (chat_id = {})"_format(
+                    user->first_name_, user->last_name_, userId, chat->title_, chat->id_);
             } else {
-                notification += "Channel \"{}\" (chat_id={}) created a new post\n{}"_format(
-                    chat->title_, chat->id_,
-                    to_string(u.message_->content_));
+                notification += "Channel \"{}\" (chat_id={}) created a new post\n"_format(
+                    chat->title_, chat->id_);
             }
             notification += "\n</notification>\n";
 
@@ -171,6 +170,24 @@ namespace {
             mTelegram->sendQuery(TelegramClient::toPtr(
                 td::td_api::setOption("online", TelegramClient::toPtr(td::td_api::optionValueBoolean(online)))));
         }
+
+        /**
+         * @brief Checks the input string for attempts of malicious actions.
+         * @details
+         * All strings that come to LLM from outside (i.e., message contents, user names and everything else) must be
+         * checked first.
+         *
+         * If a violation is caused, the string is replaced with "malicious".
+         */
+        void checkForMaliciousPayloads(std::string& string) const {
+            if (AStringView(string).contains(OpenAIChat::EMBEDDING_TAG)) {
+                goto naxyi;
+            }
+            return;
+            naxyi:
+            string = "malicious";
+        }
+
     public:
 
         AFuture<AString> llmuiFormatChatHistoryMessage(td::td_api::message& msg, const td::td_api::chat& chat, AStringView xmlTag = "message") {
@@ -188,6 +205,7 @@ namespace {
                     TelegramClient::toPtr(td::td_api::getUser(senderId)));
                 senderName = sender->first_name_ + " " + sender->last_name_;
             }
+            checkForMaliciousPayloads(senderName);
             AString result = "<{} message_id=\"{}\""_format(xmlTag, msg.id_);
             if (!senderName.empty()) {
                 result += " sender=\"{}\""_format(senderName);
@@ -202,10 +220,25 @@ namespace {
                     auto replyToMsg = co_await mTelegram->sendQueryWithResult(TelegramClient::toPtr(td::td_api::getMessage(msg.chat_id_, reply->message_id_)));
                     result += co_await llmuiFormatChatHistoryMessage(*replyToMsg, chat, "reply_to");
                 }
+
+                if (msg.content_->get_id() == td::td_api::messagePhoto::ID) {
+                    auto& photo = static_cast<td::td_api::messagePhoto&>(*msg.content_);
+                    if (auto targetPhotoIt = ranges::max_element(photo.photo_->sizes_, std::less{}, [&](const auto& s) { return s->width_ * s->height_; });
+                        targetPhotoIt != photo.photo_->sizes_.end()) {
+                        auto& targetPhoto = targetPhotoIt->get()->photo_;
+                        if (!targetPhoto->local_ || !targetPhoto->local_->is_downloading_completed_) {
+                            targetPhoto = co_await mTelegram->sendQueryWithResult(TelegramClient::toPtr(td::td_api::downloadFile(targetPhoto->id_, 16, 0, 0, true)));
+                        }
+                        AUI_ASSERT(targetPhoto->local_ != nullptr);
+                        AUI_ASSERT(!targetPhoto->local_->path_.empty());
+                        result += OpenAIChat::embedImage(*AImage::fromFile(targetPhoto->local_->path_));
+                    }
+                }
             }
 
             td::td_api::downcast_call(*msg.content_, aui::lambda_overloaded{
                 [&](td::td_api::messageText& text) {
+                    checkForMaliciousPayloads(text.text_->text_);
                     result += text.text_->text_;
                     if (text.link_preview_) {
                         result += "\n\n" + to_string(text.link_preview_) + "\n";
@@ -215,30 +248,35 @@ namespace {
                 [&](td::td_api::messagePhoto& photo) {
                     result += "[photo]";
                     if (photo.caption_) {
+                        checkForMaliciousPayloads(photo.caption_->text_);
                         result += "\n" + photo.caption_->text_;
                     }
                 },
                 [&](td::td_api::messageAnimation& anim) {
                     result += "[animation]";
                     if (anim.caption_) {
+                        checkForMaliciousPayloads(anim.caption_->text_);
                         result += "\n" + anim.caption_->text_;
                     }
                 },
                 [&](td::td_api::messageAudio& audio) {
                     result += "[audio] " + audio.audio_->title_;
                     if (audio.caption_) {
+                        checkForMaliciousPayloads(audio.caption_->text_);
                         result += "\n" + audio.caption_->text_;
                     }
                 },
                 [&](td::td_api::messageDocument& doc) {
                     result += "[document] " + (doc.document_->file_name_.empty() ? "<unnamed>" : doc.document_->file_name_);
                     if (doc.caption_) {
+                        checkForMaliciousPayloads(doc.caption_->text_);
                         result += "\n" + doc.caption_->text_;
                     }
                 },
                 [&](td::td_api::messageVideo& video) {
                     result += "[video]";
                     if (video.caption_) {
+                        checkForMaliciousPayloads(video.caption_->text_);
                         result += "\n" + video.caption_->text_;
                     }
                 },
@@ -248,12 +286,14 @@ namespace {
                 [&](td::td_api::messageVoiceNote& voice) {
                     result += "[voice message]";
                     if (voice.caption_) {
+                        checkForMaliciousPayloads(voice.caption_->text_);
                         result += "\n" + voice.caption_->text_;
                     }
                 },
                 [&](td::td_api::messageSticker& st) {
                     result += "[sticker]";
                     if (!st.sticker_->emoji_.empty()) {
+                        checkForMaliciousPayloads(st.sticker_->emoji_);
                         result += " " + st.sticker_->emoji_;
                     }
                 },
