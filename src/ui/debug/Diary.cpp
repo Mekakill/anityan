@@ -38,6 +38,9 @@ namespace {
         }
 
         AFuture<> updateQueriedEntries() {
+            if (query->empty()) {
+                co_return;
+            }
             isLoading = true;
             AUI_DEFER { isLoading = false; };
             auto filter = [](const Diary::EntryEx& e) {

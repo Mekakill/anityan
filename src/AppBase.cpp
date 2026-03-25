@@ -123,7 +123,7 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
                                 }
                                 break;
                             }
-                            if (diary.length() > config::DIARY_INJECTION_MAX_LENGTH / 2) {
+                            if (diary.length() > config::DIARY_INJECTION_MAX_LENGTH) {
                                 // set the minimum constraint for the future queries
                                 self.mRelevanceThreshold = relatedness;
                                 break;
@@ -164,6 +164,12 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
 
                 if (botAnswer.choices.empty() || botAnswer.choices.at(0).message.tool_calls.empty()) {
                     // no tool calls.
+                    if (!botAnswer.choices.empty()) {
+                        if (botAnswer.choices.at(0).message.content.contains("tool call #send_telegram_message")) {
+                            // the bot misused tool calls capabilities. try again lol.
+                            goto naxyi_populate_ctx;
+                        }
+                    }
                     ALogger::info(LOG_TAG) << "toolCallHappened=" << toolCallsHappened << " noopWarning=" << noopWarning;
                     if (!toolCallsHappened) {
                         if (std::exchange(noopWarning, false)) {
@@ -182,10 +188,35 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
                 } else {
                     toolCallsHappened = true;
                 }
-                self.mTemporaryContext << botAnswer.choices.at(0).message;
-                self.mTemporaryContext << co_await notification.actions.handleToolCalls(botAnswer.choices.at(0).message.tool_calls);
-                ALOG_DEBUG(LOG_TAG) << "Tool call response: " << self.mTemporaryContext.last().content;
-                AUI_ASSERT(AThread::current() == self.getThread());
+                {
+                    auto toolCalls = co_await notification.actions.handleToolCalls(botAnswer.choices.at(0).message.tool_calls);
+                    if (ranges::any_of(toolCalls, [](const OpenAIChat::Message& msg) { return msg.content.contains(OpenAIChat::EMBEDDING_TAG); })) {
+                        // Indicates a low quality tool call.
+                        //
+                        // This tag is used as an exception condition within a tool handler, and handled by AppBase.
+                        // When caught, LLM's tool call appends to the user's last message, and user's last message will
+                        // be sent again.
+                        //
+                        // This allows the feedback workflow: when a low quality message was passed to
+                        // send_telegram_message, it can throw EMBEDDING_TAG to rollback before LLM's
+                        // #send_telegram_message and slightly adjust LLM's following action. This differs from the
+                        // standard AException workflow which is used for technical errors (such as you were banned, or
+                        // no internet connection) whose are meaningful to LLM and it can adopt to.
+
+                        if (botAnswer.usage.prompt_tokens > config::DIARY_TOKEN_COUNT_TRIGGER) {
+                            // we are stuck; ignore the event
+                            ALogger::warn("AppBase") << "LLM can't find proper response to the notification; "
+                                                        "context is overflown. Ignoring event and dumping context";
+                            co_await self.diaryDumpMessages();
+                            continue;
+                        }
+                        goto naxyi_preserve_ctx;
+                    }
+                    self.mTemporaryContext << botAnswer.choices.at(0).message;
+                    self.mTemporaryContext << std::move(toolCalls);
+                    ALOG_DEBUG(LOG_TAG) << "Tool call response: " << self.mTemporaryContext.last().content;
+                    AUI_ASSERT(AThread::current() == self.getThread());
+                }
 
                 if (pauseFlag) {
                     finish:

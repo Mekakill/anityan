@@ -189,7 +189,7 @@ AFuture<> Diary::sleepingConsolidation() {
         auto body = [&] {
             AString body;
             for (const auto&[i, entry] : results | ranges::view::enumerate) {
-                if (body.length() > config::DIARY_INJECTION_MAX_LENGTH && i >= 2) {
+                if (body.length() > config::DIARY_SLEEP_MAX_LENGTH && i >= 2) {
                     break;
                 }
                 if (!body.empty()) {
@@ -217,7 +217,7 @@ AFuture<> Diary::sleepingConsolidation() {
         tryAgain2:
         OpenAIChat::Response response;
         try {
-            response = co_await chat.chat(std::move(body));
+            response = co_await chat.chat(body);
         } catch (const AException& e) {
             ALogger::err("Diary") << "sleepingConsolidation can't chat " << e;
             goto tryAgain2;

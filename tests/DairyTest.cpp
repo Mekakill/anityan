@@ -34,7 +34,7 @@ namespace {
                     const auto& object = ctx.args.asObjectOpt().valueOrException("object expected");
                     auto message = object["text"].asStringOpt().valueOrException("`text` string expected");
                     telegramPostMessage(message);
-                    co_return "Message sent successfully. Warning: you have sent a message. Consdier not spamming by using `wait` call.";
+                    co_return "Message sent successfully. Warning: you have sent a message. Consider not spamming by using `wait` call.";
                 },
             });
         }

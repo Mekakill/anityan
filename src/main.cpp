@@ -202,8 +202,15 @@ namespace {
             context += "\n\n</context>\n\nPhoto:\n\n";
             context += OpenAIChat::embedImage(*AImage::fromFile(pathToImage));
             context += "\n\nDescribe the last photo.";
-            auto response = co_await chat.chat(std::move(context));
-            co_return mImages[pathToImage] = "<photo description>\n{}\n</photo>"_format(response.choices.at(0).message.content);
+            try
+            {
+                auto response = co_await chat.chat(std::move(context));
+                co_return mImages[pathToImage] = "<photo description>\n{}\n</photo>"_format(response.choices.at(0).message.content);
+            } catch (const AException& e)
+            {
+                ALogger::err(LOG_TAG) << "Can't describe photo"  << e;
+                co_return mImages[pathToImage] = "";
+            }
         }
 
         AFuture<AString> llmuiFormatChatHistoryMessage(td::td_api::message& msg, const td::td_api::chat& chat,
@@ -451,6 +458,7 @@ namespace {
             AString result;
 
             AStringVector kuniMessages;
+            std::valarray<double> chatEmbedding;
             td::td_api::array<td::td_api::object_ptr<td::td_api::message>> messages;
             {
                 const size_t targetMessageCount = chat->unread_count_ + 10;
@@ -534,10 +542,10 @@ namespace {
 
                 // address specifically read messages.
                 // this helps switching between unrelated contexts.
+                chatEmbedding = co_await OpenAIChat{.config = config::ENDPOINT_EMBEDDING}.embedding(result);
                 {
                     const auto lengthBeforeInjection = result.length();
-                    auto query = co_await OpenAIChat{.config = config::ENDPOINT_EMBEDDING}.embedding(result);
-                    auto relatednesses = co_await diary().query(query, {.confidenceFactor = 0.f});
+                    auto relatednesses = co_await diary().query(chatEmbedding, {.confidenceFactor = 0.f});
                     for (const auto& i : relatednesses) {
                         if ((result.length() - lengthBeforeInjection) > config::DIARY_INJECTION_MAX_LENGTH) {
                             break;
@@ -634,7 +642,7 @@ on them.
                                 },
                             .required = {"text"},
                         },
-                    .handler = [this, chat, messagesInRow = _new<int>(0), kuniMessages = std::move(kuniMessages)](OpenAITools::Ctx ctx) -> AFuture<AString> {
+                    .handler = [this, chat, chatEmbedding = std::move(chatEmbedding), messagesInRow = _new<int>(0), kuniMessages = std::move(kuniMessages)](OpenAITools::Ctx ctx) -> AFuture<AString> {
                         if (*messagesInRow > 10) {
                             // stupid AI can't recognize it spams messages despite the warning
                             throw AException("Too many messages in a row. Don't spam!");
@@ -653,22 +661,71 @@ on them.
                         mTelegram->sendQuery(TelegramClient::toPtr(td::td_api::sendChatAction(chat->id_, {}, {}, TelegramClient::toPtr(td::td_api::chatActionTyping()))));
 
                         // verify that kuni does not repeat itself.
+                        // after introducing this quality of dialogs with LLM was significantly increased:
+                        // - LLM does not copypaste its prior responses
+                        // - LLM inclined to switch topics or respond nothing "if it has nothing to say", which is more
+                        //   natural.
                         {
                             auto target = co_await OpenAIChat{.config = config::ENDPOINT_EMBEDDING}.embedding(message);
                             static AMap<AString, std::valarray<double>> embeddings;
+                            double maxSimilarity = 0.0;
+                            double avgSimilarity = 0.0;
+
+                            auto injectFirstDiaryEntry = [&]() -> AFuture<> {
+                                // takes first related diary page.
+                                // hopefully this will help generating more creative responses.
+                                auto relatednesses = co_await diary().query(chatEmbedding, {.confidenceFactor = 0.f});
+                                if (relatednesses.empty()) {
+                                    co_return;
+                                }
+                                auto& i = relatednesses.front();
+                                if (mTemporaryContext.empty()) {
+                                    co_return;
+                                }
+                                mTemporaryContext.last().content.bytes().insert(0, takeDiaryEntry(i).toStdString());
+                            };
+
                             for (const auto& i : kuniMessages) {
                                 auto& embedding = embeddings[i];
                                 if (embedding.size() != target.size()) {
                                     embedding = co_await OpenAIChat{.config = config::ENDPOINT_EMBEDDING}.embedding(i);
                                 }
                                 const auto similiarity = util::cosine_similarity(target, embedding);
-                                if (similiarity > config::REPEAT_YOURSELF_TRIGGER) {
+                                avgSimilarity += similiarity;
+                                maxSimilarity = std::max(maxSimilarity, similiarity);
+                                if (similiarity > config::REPEAT_YOURSELF_TRIGGER_MAX) {
                                     ALogger::warn(LOG_TAG) << "LLM is repeating itself: " << message;
-                                    // remove llm's request to send message; so it has no clue what did it sent
-                                    // mTemporaryContext.pop_back();
-                                    throw AException("You are repeating yourself. Please make another response.");
+                                    co_await injectFirstDiaryEntry();
+                                    co_return "<{} />"_format(OpenAIChat::EMBEDDING_TAG);
                                 }
                             }
+                            avgSimilarity /= kuniMessages.size();
+                            if (avgSimilarity > config::REPEAT_YOURSELF_TRIGGER_AVG) {
+                                // LLM figured out threshold of REPEAT_YOURSELF_TRIGGER_MAX and indeed it generates
+                                // slightly more variative responses, but their general direction and structure feels
+                                // the same, stalling the dialogue.
+                                //
+                                // Kuni: звезды не спешат, даже если путь неясен... я здесь, чтобы просто быть твоим
+                                //       ориентиром, даже если это только на мгновение... 🌟
+                                // Kuni: горы стоят твердо, даже если путь неясен... я здесь, чтобы просто быть твоим
+                                //       ориентиром, даже если это только на мгновение... 🏔️
+                                //
+                                // maxSimilarity=0.73 (threshold 0.75)
+                                // avgSimilarity=0.61
+                                //
+                                // to force LLM from hyperfixating on one thing, let's motivate it to stay silent or
+                                // switch topic
+
+                                ALogger::warn(LOG_TAG) << "LLM is repeating itself: " << message;
+                                co_await injectFirstDiaryEntry();
+                                co_return "<{} />"_format(OpenAIChat::EMBEDDING_TAG);
+                            }
+
+                            if (embeddings.size() >= config::REPEAT_YOURSELF_MAX_HISTORY) {
+                                ALOG_DEBUG(LOG_TAG) << "Dropped \"repeat yourself\" history";
+                                embeddings.clear();
+                            }
+                            ALOG_DEBUG(LOG_TAG) << "\"repeat yourself\" maxSimilarity=" << maxSimilarity << " avgSimilarity=" << avgSimilarity;
                             embeddings.emplace(message, std::move(target));
                         }
 
@@ -689,6 +746,7 @@ on them.
                         // messages.
                         // if not, `chat` will send chat action nullptr and close the chat in dtor.
                         mTelegram->sendQuery(TelegramClient::toPtr(td::td_api::sendChatAction(chat->id_, {}, {}, TelegramClient::toPtr(td::td_api::chatActionTyping()))));
+                        ALOG_DEBUG(LOG_TAG) << "Sent message: " << message;
 
                         ++*messagesInRow;
 
@@ -706,6 +764,9 @@ on them.
                     .handler = [this, chat](OpenAITools::Ctx ctx) -> AFuture<AString> {
                         // just a freestanding function. sometimes LLM decides to check person's photo without an
                         // instruction!
+                        if (chat->photo_ == nullptr) {
+                            co_return "<chat_photo chat_name=\"{}\">Chat \"{}\" has no photo.</chat_photo>"_format(chat->title_, chat->title_);
+                        }
                         auto image = co_await describePhoto(co_await fetchPhoto(chat->photo_->big_));
                         co_return "<chat_photo chat_name=\"{}\">{}</chat_photo>\nThis is avatar photo of \"{}\". When referring to it, let the person know that you are referring to their avatar."_format(chat->title_, image, chat->title_);
                     },
@@ -735,7 +796,9 @@ AUI_ENTRY {
 
     AAsyncHolder async;
     async << [](_<App> app) -> AFuture<> {
+        ALogger::info(LOG_TAG) << "Waiting for Telegram network...";
         co_await app->telegram()->waitForConnection();
+        ALogger::info(LOG_TAG) << "Connected to Telegram";
 
         app->actProactively(); // for tests
     }(app);

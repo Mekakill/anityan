@@ -6,10 +6,10 @@ option(BUILD_SHARED_LIBS OFF)
 set(AUI_VERSION 6d0908466c44959edffba506e850948f9c50d087)
 
 # Use AUI.Boot
-file(
-        DOWNLOAD
-        https://raw.githubusercontent.com/aui-framework/aui/${AUI_VERSION}/aui.boot.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
+#file(
+#        DOWNLOAD
+#        https://raw.githubusercontent.com/aui-framework/aui/${AUI_VERSION}/aui.boot.cmake
+#        ${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
 set(AUI_COROUTINES "Use C++20 coroutines" ON)
@@ -25,7 +25,7 @@ auib_import(date https://github.com/HowardHinnant/date)
 
 set(AUIB_TD_VALIDATE OFF)
 auib_import(Td https://github.com/tdlib/td
-        VERSION e597838)
+        VERSION 0ae923c)
 
 aui_executable(${PROJECT_NAME})
 

@@ -5,7 +5,6 @@
 #include "OpenAIChat.h"
 
 #include <chrono>
-#include <gtest/gtest-message.h>
 #include <optional>
 #include <random>
 #include <range/v3/algorithm/generate.hpp>
@@ -156,6 +155,7 @@ AFuture<OpenAIChat::Response> OpenAIChat::chat(AVector<Message> messages) {
 }
 
 AFuture<std::valarray<double>> OpenAIChat::embedding(AString input) {
+    AUI_ASSERT(!input.empty());
     AVector<AString> headers = {"Content-Type: application/json"};
     if (!config.endpoint.bearerKey.empty()) {
         headers << "Authorization: Bearer {}"_format(config.endpoint.bearerKey);

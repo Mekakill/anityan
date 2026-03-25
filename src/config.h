@@ -301,12 +301,12 @@ Use proper Markdown formatting in your answers.
 
     static const EndpointAndModel ENDPOINT_MAIN {
         .endpoint = {
-            .baseUrl = "http://localhost:11434/v1/",
-            // .baseUrl = "https://api.deepseek.com/",
-            // .bearerKey = secrets::DEEPSEEK_BEARER_KEY,
+            // .baseUrl = "http://localhost:11434/v1/",
+            .baseUrl = "https://api.deepseek.com/",
+            .bearerKey = secrets::DEEPSEEK_BEARER_KEY,
         },
-        .model = "qwen3:14b",
-        // .model = "deepseek-reasoner",
+        // .model = "qwen3:14b",
+        .model = "deepseek-reasoner",
 
         // .model = "gpt-oss-20b-128k:latest"; // норм но тупая
         // .model = "lfm2"; // не может вызвать тулы
@@ -333,14 +333,17 @@ Use proper Markdown formatting in your answers.
     static constexpr auto DIARY_TOKEN_COUNT_TRIGGER = 20000;
     static constexpr auto DIARY_AVERAGE_ENTRY_SIZE = 1000;
     static constexpr auto DIARY_INJECTION_MAX_LENGTH = DIARY_AVERAGE_ENTRY_SIZE * 5;
+    static constexpr auto DIARY_SLEEP_MAX_LENGTH = DIARY_AVERAGE_ENTRY_SIZE * 15;
     static constexpr auto DIARY_PLAGIARISM_THRESHOLD = 0.97f;
     static constexpr auto DIARY_MIN_RELATEDNESS = 0.8f;
 
     static constexpr auto TEMPERATURE = 0.2f; // средняя температура по больнице
 
-    static constexpr auto REPEAT_YOURSELF_TRIGGER = 0.75f;
+    static constexpr auto REPEAT_YOURSELF_TRIGGER_AVG = 0.5f;
+    static constexpr auto REPEAT_YOURSELF_TRIGGER_MAX = 0.7f;
+    static constexpr auto REPEAT_YOURSELF_MAX_HISTORY = 32;
 
-    static constexpr auto OPENAI_REQUEST_TIMEOUT = std::chrono::minutes(5);
+    static constexpr auto OPENAI_REQUEST_TIMEOUT = std::chrono::minutes(10);
 
     static constexpr auto DIARY_PROMPT = R"(
 It's time to open diary and share your thoughts, emotions and feelings! How did you spent your time? Write shortly, but
@@ -498,8 +501,11 @@ John acts inconsistently: sometimes he's good, sometimes he's asshole.
 - Merge near-duplicate mutables covering the same claim/topic within max_merge_span.
 - Split mixed-content mutables into separate focused pieces (e.g., a fact vs. a reflection vs. a photo description).
 - Compress verbosity while preserving discriminative details.
+- Include kind of information for each piece with one of the following enums: ENTITY_DESCRIPTION, THOUGHT, EVENT, FACT,
+  OTHER. This helps you in classification and merging pieces of the same kind. Be proactive in merging
+  ENTITY_DESCRIPTIONs that refer to the same entities.
 
-The kind of information stored in a piece is not strict and up to you to decide. For example:
+The kind of information stored in a piece is not strict and up to you to decide:
 
 - entity (person) description
   - appearance (if any)
@@ -509,19 +515,28 @@ The kind of information stored in a piece is not strict and up to you to decide.
   - traits
   - interests
   - brief dialogue descriptions
+  - important facts
 - thoughts (reflections)
   - related entities
+  - related messages verbatim
   - source events
   - incomes, outcomes
   - full point description
   - reasoning
 - events/dialogues
   - related entities
+  - related messages verbatim
   - source events
   - incomes, outcomes
   - description
+- facts (news)
+  - related entities
+  - related messages(news) verbatim
+  - source events
+  - incomes, outcomes
+  - description
+- other
 
-You are free to alter this description.
 
 <example>
 
@@ -630,4 +645,12 @@ instance, if you come across three pieces that describe the same event (such as 
 single piece that provides a comprehensive view of the event.
 )";
 
+  static constexpr auto SD_BASE_PROMPT = R"(
+Anime girl cat ears shoulder-length dark_blue hair messy strands blue eyes  small nose cute fangs. Shoulders and chest are bare. Floating particles in the air.
+selfie
+age_30
+medium breasts
+<lora:perfecteyes:1>
+ <lora:Iridescence:1>
+)";
 } // namespace config
