@@ -328,6 +328,11 @@ Use proper Markdown formatting in your answers.
         .model = "qwen3-embedding",
     };
 
+
+    static const Endpoint ENDPOINT_SD {
+        .baseUrl = "http://localhost:7860/",
+    };
+
     static constexpr auto PAPIK_CHAT_ID = 625207005;
 
     static constexpr auto DIARY_TOKEN_COUNT_TRIGGER = 20000;
