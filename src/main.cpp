@@ -15,6 +15,8 @@
 #include "AUI/Util/ASharedRaiiHelper.h"
 #include "AUI/Util/kAUI.h"
 #include "AppBase.h"
+#include "ImageGenerator.h"
+#include "AUI/Image/jpg/JpgImageLoader.h"
 #include "telegram/TelegramClient.h"
 #include "ui/debug/KuniDebugWindow.h"
 
@@ -40,11 +42,25 @@ namespace {
 
 
     protected:
-        AFuture<> telegramPostMessage(int64_t chatId, AString text) {
+        AFuture<> telegramPostMessage(int64_t chatId, AString text, AOptional<_<AImage>> photo = std::nullopt) {
             co_await telegram()->sendQueryWithResult([&] {
                 auto msg = td::td_api::make_object<td::td_api::sendMessage>();
                 msg->chat_id_ = chatId;
-                msg->input_message_content_ = [&] {
+                msg->input_message_content_ = [&]() -> td::td_api::object_ptr<td::td_api::InputMessageContent> {
+                    if (photo) {
+                        auto content = td::td_api::make_object<td::td_api::inputMessagePhoto>();
+                        content->caption_ = [&] {
+                            auto t = td::td_api::make_object<td::td_api::formattedText>();
+                            t->text_ = text;
+                            return t;
+                        }();
+                        content->width_ = photo->get()->width();
+                        content->height_ = photo->get()->height();
+                        JpgImageLoader::save(AFileOutputStream("temp.jpg"), **photo);
+                        content->photo_ = TelegramClient::toPtr(td::td_api::inputFileLocal("temp.jpg"));
+                        return content;
+                    }
+
                     auto content = td::td_api::make_object<td::td_api::inputMessageText>();
                     content->text_ = [&] {
                         auto t = td::td_api::make_object<td::td_api::formattedText>();
@@ -639,6 +655,7 @@ on them.
                             .properties =
                                 {
                                     {"text", {.type = "string", .description = "Contents of the message"}},
+                                    {"photo_desc", {.type = "string", .description = "Adds a photo made by Kuni. This field describes the image Kuni would like to achieve. Example: \"Kuni makes playful selfie\". Refer to yourself as Kuni."}},
                                 },
                             .required = {"text"},
                         },
@@ -740,7 +757,17 @@ on them.
                         // to one tick).
                         // however, if something goes wrong, this is reported as an exception to LLM and it will know
                         // that a technical issue appeared during sending the message (i.e., LLMs bot was banned)
-                        co_await telegramPostMessage(chat->id_, message);
+                        {
+                            AOptional<_<AImage>> photo;
+                            try {
+                                if (auto photoDesc = ctx.args["photo_desc"].asStringOpt()) {
+                                    photo = co_await ImageGenerator{StableDiffusionClient{}, OpenAIChat{.config = config::ENDPOINT_PHOTO_TO_TEXT}}.generate(*photoDesc);
+                                }
+                            } catch (const AException& e) {
+                                ALogger::warn(LOG_TAG) << "Failed to generate photo: " << e;
+                            }
+                            co_await telegramPostMessage(chat->id_, message, std::move(photo));
+                        }
 
                         // indicate that bot is typing once again; this would feel natural if llm sends series of
                         // messages.

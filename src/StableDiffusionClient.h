@@ -8,7 +8,7 @@
 #include "Endpoint.h"
 
 struct StableDiffusionClient {
-    Endpoint endpoint;
+    Endpoint endpoint = config::ENDPOINT_SD;
 
     struct Txt2ImgRequest {
         AString prompt;
