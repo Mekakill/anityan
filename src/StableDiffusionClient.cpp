@@ -27,6 +27,7 @@ AJSON_FIELDS(StableDiffusionClient::Txt2ImgRequest,
              AJSON_FIELDS_ENTRY(width)
              AJSON_FIELDS_ENTRY(height)
              AJSON_FIELDS_ENTRY(send_images)
+             AJSON_FIELDS_ENTRY(override_settings)
              AJSON_FIELDS_ENTRY(save_images))
 
 AFuture<StableDiffusionClient::Txt2ImgResponse> StableDiffusionClient::txt2img(const Txt2ImgRequest& request) {

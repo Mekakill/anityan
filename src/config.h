@@ -657,4 +657,5 @@ medium breasts
 <lora:perfecteyes:1>
 <lora:Iridescence:1>
 )";
+  static constexpr auto SD_CHECKPOINT = "novaAnimeXL_ilV170.safetensors";
 } // namespace config

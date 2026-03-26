@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #include "AUI/Common/AString.h"
 #include "AUI/Common/AVector.h"
 #include "AUI/Json/AJson.h"
@@ -20,6 +21,9 @@ struct StableDiffusionClient {
         int64_t seed_resize_from_w = -1;
         AString sampler_name = "DPM++ 2M";
         AString scheduler = "Automatic";
+        AMap<AString, AString> override_settings {
+            {"sd_model_checkpoint", config::SD_CHECKPOINT }
+        };
         int64_t batch_size = 1;
         int64_t n_iter = 1;
         int64_t steps = 50;

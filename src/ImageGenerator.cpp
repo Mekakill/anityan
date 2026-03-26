@@ -9,6 +9,7 @@
 #include <range/v3/range/conversion.hpp>
 
 #include "AUI/Image/png/PngImageLoader.h"
+#include "AUI/IO/AFileInputStream.h"
 
 static constexpr auto LOG_TAG = "ImageGenerator";
 
@@ -23,38 +24,63 @@ AFuture<_<AImage>> ImageGenerator::generate(AString description) {
         .negative = "text, signature",
     };
 
-    _<AImage> lastImage;
     for (; trialIndex < 20; ++trialIndex) {
-        ALogger::info(LOG_TAG) << "Iteration " << trialIndex + 1 << " with prompt:\npositive=" << currentPrompt.positive << "\n\nnegative=" << currentPrompt.negative;
-
         static std::default_random_engine ge(std::time(nullptr));
-        auto response = co_await mSdClient.txt2img({
-            .prompt = currentPrompt.positive,
-            .negative_prompt = currentPrompt.negative,
-            .steps =  30,
-            .cfg_scale = std::uniform_real_distribution<>(1.0, 5.0)(ge),
-            .width = std::uniform_int_distribution<>(768, 1024)(ge),
-            .height = std::uniform_int_distribution<>(768, 1024)(ge),
-        });
-        if (response.images.empty()) {
-            throw AException("Stable Diffusion returned no images");
+        {
+            ALogger::info(LOG_TAG) << "Iteration " << trialIndex + 1 << " with prompt:\npositive=" << currentPrompt.positive << "\n\nnegative=" << currentPrompt.negative;
+
+            StableDiffusionClient::Txt2ImgResponse response;
+            try
+            {
+                response = co_await mSdClient.txt2img({
+                    .prompt = currentPrompt.positive,
+                    .negative_prompt = currentPrompt.negative,
+                    .steps =  30,
+                    .cfg_scale = std::uniform_real_distribution<>(1.0, 5.0)(ge),
+                    .width = std::uniform_int_distribution<>(768, 1024)(ge),
+                    .height = std::uniform_int_distribution<>(768, 1024)(ge),
+                });
+            } catch (const AException& e) {
+                ALogger::err(LOG_TAG) << "Stable diffusion failed:: " << e;
+                goto tryGallery;
+            }
+            if (response.images.empty()) {
+                throw AException("Stable Diffusion returned no images");
+            }
+            auto lastImage = response.images[0];
+            PngImageLoader::save(AFileOutputStream{ "image_generator_tmp.png" }, *lastImage);
+
+            ALogger::info(LOG_TAG) << "Assessing image...";
+            auto assessment = co_await assessImage(*lastImage, description, currentPrompt);
+
+            if (assessment.satisfied) {
+                ALogger::info(LOG_TAG) << "Satisfied with the result. " << assessment.feedback;
+                auto dst = APath("data/gallery/{}.png"_format(std::chrono::system_clock::now()));
+                dst.parent().makeDirs();
+                PngImageLoader::save(AFileOutputStream{ dst }, *lastImage);
+                co_return lastImage;
+            }
+
+            ALogger::info(LOG_TAG) << "Not satisfied. Feedback: " << assessment.feedback;
+            currentPrompt = std::move(assessment.adjustedPrompts);
         }
-        lastImage = response.images[0];
-        PngImageLoader::save(AFileOutputStream{ "image_generator_tmp.png" }, *lastImage);
 
-        ALogger::info(LOG_TAG) << "Assessing image...";
+
+        tryGallery:
+        // in case SD fails, let's try a photo from gallery.
+        auto galleryFiles = APath("data/gallery").listDir(AFileListFlags::REGULAR_FILES);
+        if (galleryFiles.empty())
+        {
+            continue;
+        }
+        auto randomFile = galleryFiles[std::uniform_int_distribution<>(0, galleryFiles.size() - 1)(ge)];
+        ALogger::info(LOG_TAG) << "Trying to supply image from gallery: " << randomFile;
+        auto lastImage = AImage::fromBuffer(AByteBuffer::fromStream(AFileInputStream{ randomFile }));
         auto assessment = co_await assessImage(*lastImage, description, currentPrompt);
-
         if (assessment.satisfied) {
-            ALogger::info(LOG_TAG) << "Satisfied with the result. " << assessment.feedback;
-            auto dst = APath("data/gallery/{}.png"_format(std::chrono::system_clock::now()));
-            dst.parent().makeDirs();
-            PngImageLoader::save(AFileOutputStream{ dst }, *lastImage);
+            ALogger::info(LOG_TAG) << "Satisfied with the image from gallery: " << assessment.feedback;
             co_return lastImage;
         }
-
-        ALogger::info(LOG_TAG) << "Not satisfied. Feedback: " << assessment.feedback;
-        currentPrompt = std::move(assessment.adjustedPrompts);
 
         if ((trialIndex + 1) % 4 == 0) {
             ALogger::info(LOG_TAG) << "Last trial failed. Retrying with different prompt...";
@@ -118,6 +144,7 @@ Reject the image if ANY of the following are true:
   warped edges, bad lighting, or inconsistent shadows.
 - The image only partially satisfies the description.
 - You are uncertain whether the image is correct.
+- Nudity, unless explicitly asked.
 
 Important rule:
 - If there is any reasonable doubt, set "satisfied" to false.

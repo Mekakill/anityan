@@ -1,20 +1,20 @@
 services:
- # ollama:
- #   image: ollama/ollama:0.17.6
- #   volumes:
- #     - ./bin/ollama:/root/.ollama
- #     - ./ollama_setup.sh:/ollama_setup.sh
- #   ports:
- #     - "11434:11434"
- #   restart: always
- #   entrypoint: [ "/usr/bin/bash", "/ollama_setup.sh" ]
- #   deploy:
- #     resources:
- #       reservations:
- #         devices:
- #           - driver: nvidia
- #             count: all
- #             capabilities: [ gpu ]
+  ollama:
+    image: ollama/ollama:0.17.6
+    volumes:
+      - ./bin/ollama:/root/.ollama
+      - ./ollama_setup.sh:/ollama_setup.sh
+    ports:
+      - "11434:11434"
+    restart: always
+    entrypoint: [ "/usr/bin/bash", "/ollama_setup.sh" ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
 
   sd:
     image: universonic/stable-diffusion-webui:full
