@@ -20,6 +20,7 @@
 #include "OpenAIChat.h"
 #include "config.h"
 #include "KuniCharacter.h"
+#include "WebSearch.h"
 #include "util/cosine_similarity.h"
 
 using namespace std::chrono_literals;
@@ -337,7 +338,7 @@ Act proactively!
 void AppBase::updateTools(OpenAITools& actions) {
     actions.insert({
         .name = "ask_diary",
-        .description = "Consult with Kuni's main knowledge database",
+        .description = "Consult with Kuni's main knowledge database (subagent). Use this to retrieve additional pages from diary. USE THIS PROACTIVELY.",
         .parameters = {
             .properties =
                 {
@@ -351,6 +352,21 @@ void AppBase::updateTools(OpenAITools& actions) {
                 throw AException("too short query! provide more context!");
             }
             co_return (co_await mDiary.queryAI(query, {.confidenceFactor = 0.f})) + "\nIf response above is dismissive, try rephrasing your query and include other details";
+        },
+    });
+    actions.insert({
+        .name = "ask_google",
+        .description = "Perform web search subagent",
+        .parameters = {
+            .properties =
+                {
+                    {"query", {.type = "string", .description = "Question to ask the subagent. Not a standard search engine query; form a question in natural language"}},
+                },
+            .required = {"query"},
+        },
+        .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
+            auto query = ctx.args["query"].asStringOpt().valueOrException("\"query\" string is required");
+            return web::searchAI(query);
         },
     });
 }

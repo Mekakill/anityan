@@ -686,8 +686,7 @@ on them.
                             // stupid AI can't recognize it spams messages despite the warning
                             throw AException("Too many messages in a row. Don't spam!");
                         }
-                        const auto& object = ctx.args.asObjectOpt().valueOrException("object expected");
-                        auto message = object["text"].asStringOpt().valueOr("");
+                        auto message = ctx.args["text"].asStringOpt().valueOr("");
                         auto photoFilename = ctx.args["photo_filename"].asStringOpt().valueOr("");
 
                         if (message.empty() && photoFilename.empty()) {
@@ -744,7 +743,19 @@ on them.
                                 if (similiarity > config::REPEAT_YOURSELF_TRIGGER_MAX) {
                                     ALogger::warn(LOG_TAG) << "LLM is repeating itself: (maxSimilarity=" << maxSimilarity << ")" << message;
                                     static std::default_random_engine re(std::time(nullptr));
-                                    if (std::uniform_real_distribution<>(0.0, 1.0)(re) < 0.2) {
+                                    if (std::uniform_real_distribution<>(0.0, 1.0)(re) < 0.1) {
+                                        // Alex2772 (apr 6 2026):
+                                        //
+                                        // since the introduction of ask_diary and ask_google, we don't really need
+                                        // this branch anymore. When receiving "You are repeating yourself" several
+                                        // times in a row, LLM proactively uses these tools instead to research for
+                                        // additional data and drastically improve response quality.
+                                        //
+                                        // so we don't need to forcefully inject diary entries by ourselves.
+                                        //
+                                        // i temporarily decreased the chance of this branch, maybe we'll remove it
+                                        // completely.
+
                                         co_await injectFirstDiaryEntry();
                                         // <kuni_embedding /> will be interpreted by core as "remove the latest LLM response"
                                         // this way LLM has no clue what did it sent; maybe more creative

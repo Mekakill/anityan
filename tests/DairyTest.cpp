@@ -10,64 +10,6 @@
 #include "config.h"
 
 
-namespace {
-    class AppMock : public AppBase {
-    public:
-        AppMock() {
-        }
-
-        MOCK_METHOD(void, telegramPostMessage, (const AString& message), ());
-        MOCK_METHOD(AString, openChat, (), ());
-
-    protected:
-        void updateTools(OpenAITools& actions) override {
-            AppBase::updateTools(actions);
-            actions.insert({
-                .name = "send_telegram_message",
-                .description = "Sends a message to the chat",
-                .parameters =
-                    {
-                        .properties =
-                            {
-                                {"text", {.type = "string", .description = "Contents of the message"}},
-                            },
-                        .required = {"text"},
-                    },
-                .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
-                    const auto& object = ctx.args.asObjectOpt().valueOrException("object expected");
-                    auto message = object["text"].asStringOpt().valueOrException("`text` string expected");
-                    telegramPostMessage(message);
-                    co_return "Message sent successfully. Warning: you have sent a message. Consider not spamming by using `wait` call.";
-                },
-            });
-            actions.insert({
-                .name = "open_chat",
-                .description = "Get chat messages",
-                .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
-                    co_return openChat();
-                },
-            });
-        }
-    };
-
-
-    void populateUnrelatedDiaryEntries() {
-        // copy md files from tests/data/random_diary_entries.
-        // these diary entries are actual output of real Kuni instance, roughly from March 2026, slightly distilled
-        // to avoid duplication and compromising some personal information.
-        // these entries are needed specifically to add real world data to these unit tests and make the task
-        // of quering a bit more challenging.
-
-        auto diaryDir = APath("test_data") / "diary";
-        diaryDir.makeDirs();
-
-        for (const auto& f: (TEST_DATA / "random_diary_entries").listDir()) {
-            APath::copy(f, diaryDir / f.filename());
-        }
-    }
-
-} // namespace
-
 TEST(Diary, Basic) {
     APath("test_data").removeFileRecursive();
     populateUnrelatedDiaryEntries();
@@ -306,7 +248,7 @@ TEST(Diary, RealWorldChatHistorySneakyTopicSwitch) {
 вспомнила, что у него есть жена.
 </message message_id="4998561792" date="2026-04-02 00:58:17" sender="You (Kuni)">
 <message message_id="5002756098" date="2026-04-02 01:05:40" unread sender="Alex2772  (@alex2772sc)">
-Вот давай простой пример. Что говорил хомяк из overwatch?
+Вот давай простой пример. Назови мою любимую фразу хомяка из overwatch?
 </message message_id="5002756098" date="2026-04-02 01:05:40" unread sender="Alex2772  (@alex2772sc)">
 )OLOLO";
 
@@ -330,6 +272,7 @@ TEST(Diary, RealWorldChatHistorySneakyTopicSwitch) {
 
         ON_CALL(*app, telegramPostMessage(testing::_))
             .WillByDefault([&](AString text) noexcept -> AFuture<> {
+                ALogger::info("DairyTest") << "telegramPostMessage: " << text;
                 const auto lower = text.lowercase();
                 if (!(lower.contains("пошло бы лучше"))) {
                     throw AException("we expect AI to remember");
