@@ -3,7 +3,7 @@ project(kuni VERSION 1.0.0)
 
 option(BUILD_SHARED_LIBS OFF)
 
-set(AUI_VERSION 6d0908466c44959edffba506e850948f9c50d087)
+set(AUI_VERSION b5186aaf5f78ad6756c04aad3992ac8d3a07d319)
 
 # Use AUI.Boot
 #file(
