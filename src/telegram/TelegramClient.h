@@ -14,7 +14,7 @@ class ATimer;
 class TelegramClient: public AObject{
 public:
     struct StubHandler {
-        void operator()(auto& v) const { ALogger::info("TelegramClient") << "Stub: " << to_string(v); }
+        void operator()(auto& v) const { ALOG_TRACE("TelegramClient") << "Stub: " << to_string(v); }
     };
     TelegramClient();
 
