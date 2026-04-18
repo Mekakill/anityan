@@ -103,8 +103,13 @@ AFuture<double> Diary::entryIsRelated(const std::valarray<double>& context, Entr
         co_return 0.0;
     }
     if (entry.metadata.embedding.size() != context.size()) {
-        entry.metadata.embedding = co_await OpenAIChat{.config = config::ENDPOINT_EMBEDDING}.embedding(entry.freeformBody);
-        save(entry);
+        try {
+            entry.metadata.embedding = co_await OpenAIChat{.config = config::ENDPOINT_EMBEDDING}.embedding(
+                entry.freeformBody.replaceAll("\t", "  "));
+            save(entry);
+        } catch (const AException&) {
+            throw AException("while generating embedding vector for {}"_format(entry.id));
+        }
     }
     auto task = AUI_THREADPOOL_X [&] {
         return ((util::cosine_similarity(context, entry.metadata.embedding) + 1.0) / 2.0) + entry.metadata.confidence * opts.confidenceFactor;
