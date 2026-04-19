@@ -23,6 +23,8 @@
 #include "WebSearch.h"
 #include "util/cosine_similarity.h"
 
+#include <range/v3/action/erase.hpp>
+
 static std::default_random_engine re(std::time(nullptr));
 
 using namespace std::chrono_literals;
@@ -77,8 +79,26 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
     mWakeupTimer->start();
 
     mAsync << [](AppBase& self) -> AFuture<> {
-        co_await self.mDiary.sleepingConsolidation();
+        // co_await self.mDiary.sleepingConsolidation();
+
+        co_await onBeforeMainLoop();
         for (;;) {
+            if (self.mTemporaryContext.size() <= 1) {
+                if (std::uniform_real_distribution(0.0, 1.0)(re) < 0.1) {
+                    // revisit chats when Kuni does nothing.
+
+                    // Alex2772 (Apr 19 2026):
+                    // This approach is okay to revisit unfinished chats. However, if there are many unread chats,
+                    // a long toolcall chain will occur, leading to context high usage and high processing costs.
+                    // this happens because chat between C++ <-> Kuni's main LLM (mTemporaryContext) never gives
+                    // turn to OpenAIChat::Role::USER, "conversation" happens between OpenAIChat::Role::ASSISTANT and
+                    // OpenAIChat::Role::TOOL only. We ask to dump context on OpenAIChat::Role::USER's only.
+                    //
+                    // Solution: before infinite loop of this coroutine, send notifications on per-chat basis
+                    // to read these chats (onBeforeMainLoop()).
+                    self.passNotificationToAI("Check your chats.", {}, true);
+                }
+            }
 #ifndef AUI_TESTS_MODULE
             {
                 if (std::uniform_real_distribution(0.0, 1.0)(re) < 0.1) {
@@ -105,7 +125,7 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
             notification.message += "\nCurrent time: {}"_format(std::chrono::system_clock::now());
             AUI_DEFER { notification.onProcessed.supplyValue(); };
             try {
-                self.mNotifications.pop();
+                self.mNotifications.pop_front();
                 self.mTemporaryContext << OpenAIChat::Message{
                     .role = OpenAIChat::Message::Role::USER,
                     .content = std::move(notification.message),
@@ -288,8 +308,8 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
     }(*this);
 }
 
-const AFuture<>& AppBase::passNotificationToAI(AString notification, OpenAITools actions) {
-    const auto& result = mNotifications.emplace(std::move(notification), std::move(actions)).onProcessed;
+const AFuture<>& AppBase::passNotificationToAI(AString notification, OpenAITools actions, bool first) {
+    const auto& result = mNotifications.emplace(first ? mNotifications.begin() : mNotifications.end(), std::move(notification), std::move(actions))->onProcessed;
     mNotificationsSignal.supplyValue();
     return result;
 }
@@ -430,17 +450,9 @@ void AppBase::updateTools(OpenAITools& actions) {
 }
 
 void AppBase::removeNotifications(const AString& substring) {
-    std::queue<Notification> remaining;
-    while (!mNotifications.empty()) {
-        auto n = std::move(mNotifications.front());
-        mNotifications.pop();
-        if (n.message.contains(substring)) {
-            n.onProcessed.supplyException(std::make_exception_ptr(AException("notification was removed")));
-            continue; // drop it
-        }
-        remaining.push(std::move(n));
-    }
-    mNotifications = std::move(remaining);
+    mNotifications.erase(ranges::remove_if(mNotifications, [&](const Notification& n) {
+        return n.message.contains(substring);
+    }), mNotifications.end());
 }
 
 AString AppBase::takeDiaryEntry(const Diary::EntryExAndRelatedness& i) {

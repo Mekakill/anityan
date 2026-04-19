@@ -408,7 +408,7 @@ world) in the following format:
 
     static constexpr auto REQUEST_TIMEOUT = std::chrono::minutes(10);
 
-    static constexpr auto SLEEP_MAX_TIME = std::chrono::hours(3);
+    static constexpr auto SLEEP_MAX_TIME = std::chrono::hours(6);
 
     static constexpr auto DIARY_PROMPT = R"(
 It's time to open diary and share your thoughts, emotions and feelings! How did you spent your time? Write shortly, but

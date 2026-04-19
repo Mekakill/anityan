@@ -31,7 +31,7 @@ AFuture<TelegramClient::Object> TelegramClient::sendQuery(td::td_api::object_ptr
         // trigger their security leading to ban of the account.
         //
         // If the application starts to SPAM with queries, we simply crash it.
-        co_await AThread::asyncSleep(10s);
+        co_await AThread::asyncSleep(1s);
     }
 
     auto query_id = ++mCurrentQueryId;

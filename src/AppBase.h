@@ -21,7 +21,7 @@ public:
      * @details
      * Think of it as your phone's notifications: you receive a notification, read it and (maybe) react to it.
      */
-    const AFuture<>& passNotificationToAI(AString notification, OpenAITools actions = {});
+    const AFuture<>& passNotificationToAI(AString notification, OpenAITools actions = {}, bool first = false);
 
     AFuture<> diaryDumpMessages();
 
@@ -35,6 +35,14 @@ protected:
     AAsyncHolder mAsync;
 
     aui::float_within_0_1 mRelevanceThreshold = 0.5f;
+
+    /**
+     *
+     * @return @brief Called before LLM's processing loop.
+     */
+    virtual AFuture<> onBeforeMainLoop() {
+        co_return;
+    }
 
     /**
      * @brief Adds always available actions
@@ -73,7 +81,7 @@ private:
         OpenAITools actions;
         AFuture<> onProcessed;
     };
-    std::queue<Notification> mNotifications;
+    std::deque<Notification> mNotifications;
     AFuture<> mNotificationsSignal;
     _<ATimer> mWakeupTimer;
     // OpenAITools mTools;

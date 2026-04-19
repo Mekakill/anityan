@@ -20,6 +20,10 @@
 #include "AUI/Image/jpg/JpgImageLoader.h"
 #include "telegram/TelegramClient.h"
 #include "ui/debug/KuniDebugWindow.h"
+#include "util/populate_from_diary_ai_if_needed.h"
+
+#include <range/v3/action/reverse.hpp>
+#include <range/v3/algorithm/sort.hpp>
 
 using namespace std::chrono_literals;
 
@@ -119,14 +123,32 @@ namespace {
                                "chats and unread chats, or to start a new conversation.",
                 .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
                     co_await telegram()->waitForConnection();
-                    auto chats = co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(
-                        td::td_api::getChats(TelegramClient::toPtr(td::td_api::chatListMain()), 100)));
+                    auto chats = co_await [&]() -> AFuture<AVector<td::td_api::object_ptr<td::td_api::chat>>> {
+                        auto chats = (co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(
+                            td::td_api::getChats(TelegramClient::toPtr(td::td_api::chatListMain()), 50))))->chat_ids_
+                            | ranges::view::transform([&](td::td_api::int53 chatId) {
+                                return telegram()->sendQueryWithResult(TelegramClient::toPtr(td::td_api::getChat(chatId)));
+                            })
+                            | ranges::to_vector;
+                        AVector<td::td_api::object_ptr<td::td_api::chat>> result;
+                        result.reserve(chats.size());
+                        for (const auto& chat : chats) {
+                            result.push_back(co_await chat);
+                        }
+                        co_return result;
+                    }();
+
+                    // oldest first, newest last (chats in queue), because LLM tends to prioritize chats from the
+                    // top of the list.
+                    //
+                    // however, LLM sometimes decides to prioritize people, based on message preview, count and
+                    // a person.
+                    chats |= ranges::actions::reverse;
+
                     AString result =
                         "You are currently looking at Telegram's main screen. Use see the following chats:\n";
-                    for (const auto& chatId: chats->chat_ids_) {
-                        auto chat = co_await telegram()->sendQueryWithResult(
-                            TelegramClient::toPtr(td::td_api::getChat(chatId)));
-                        
+                    for (auto& chat: chats) {
+
                         // Skip non-PAPIK chats in lockdown mode
                         if constexpr (config::LOCKDOWN_MODE) {
                             if (chat->id_ != config::PAPIK_CHAT_ID) {
@@ -159,6 +181,21 @@ namespace {
                         }
                         result += " />\n";
                     }
+                    result = co_await util::populateFromDiaryAIIfNeeded(temporaryContext(), diary(), "main_screen", R"(
+{}
+
+Iterate over all chats and tell me what should I remember about each of them ({}).
+
+ALWAYS include chat names to your queries.
+
+Use absolute time in your queries.
+
+- tasks
+- reminders
+- promises
+- chat rules
+- responsibilities
+)"_format(result, util::formatPastHours())) + result;
                     co_return result;
                 },
             });
@@ -670,16 +707,20 @@ namespace {
                 // address specifically read messages.
                 // this helps switching between unrelated contexts.
                 chatEmbedding = co_await OpenAIChat{.config = config::ENDPOINT_EMBEDDING}.embedding(result);
-                {
-                    const auto lengthBeforeInjection = result.length();
-                    auto relatednesses = co_await diary().query(chatEmbedding, {.confidenceFactor = 0.f});
-                    for (const auto& i : relatednesses) {
-                        if ((result.length() - lengthBeforeInjection) > config::DIARY_INJECTION_MAX_LENGTH) {
-                            break;
-                        }
-                        result = takeDiaryEntry(i) + result;
-                    }
-                }
+                // Alex2772 (18-04-2026):
+                //
+                // Replaced embedding search with util::populateFromDiaryAIIfNeeded
+                //
+                // {
+                //     const auto lengthBeforeInjection = result.length();
+                //     auto relatednesses = co_await diary().query(chatEmbedding, {.confidenceFactor = 0.f});
+                //     for (const auto& i : relatednesses) {
+                //         if ((result.length() - lengthBeforeInjection) > config::DIARY_INJECTION_MAX_LENGTH) {
+                //             break;
+                //         }
+                //         result = takeDiaryEntry(i) + result;
+                //     }
+                // }
                 result = "You opened the chat \"{}\" in Telegram. You see last messages:\n"_format(chat->title_) + result;
 
                 switch (chat->type_->get_id()) {
@@ -844,7 +885,25 @@ on them.
                                         // path with throwing an exception
                                         co_return "<{} />"_format(OpenAIChat::EMBEDDING_TAG);
                                     }
-                                    throw AException("You are repeating yourself. Please rephrase");
+
+                                    // If LLM generates a follow-up that repeats meaning of its previous responses,
+                                    // this usually means the conversation has reached to its logical end. In such case,
+                                    // a human will not do a follow-up whatsoever.
+                                    //
+                                    // Alex2772 (apr 19 2026):
+                                    // Changed "You are repeating yourself. Please rephrase" to
+                                    // "You are repeating yourself, which usually means you have "
+                                    // "nothing to put in. Suggestion: close the chat
+                                    //
+                                    // Recently Kuni has adopted this behaviour: if Kuni receives several messages
+                                    // about repeating itself, it makes a photo instead. No thanks photo generation
+                                    // is too expensive.
+                                    //
+                                    // I'm trying to make Kuni more lazy by suggesting closing a chat on a low-quality
+                                    // follow-up.
+
+                                    throw AException("You are repeating yourself, which usually means you have "
+                                        "nothing to put in. Suggestion: close the chat");
                                 }
                             }
                             avgSimilarity /= kuniMessages.size();
@@ -933,6 +992,22 @@ on them.
                     },
                 },
             };
+
+
+            result = co_await util::populateFromDiaryAIIfNeeded(temporaryContext(), diary(), "{}"_format(chat->id_), R"(
+{}
+
+Tell me what should I remember about this chat ({}).
+
+Use absolute time in your queries.
+
+- general info about chat/person
+- tasks
+- reminders
+- promises
+- chat rules
+- responsibilities
+)"_format(result, util::formatPastHours(std::chrono::weeks(2)))) + result;
 
             co_return result;
         }
