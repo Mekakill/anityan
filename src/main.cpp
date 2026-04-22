@@ -840,7 +840,7 @@ on them.
                                         .type = "integer",
                                         .description = "If specified, the message will be rendered as a reply to the "
                                         "message with given message id. You must use it if there are multiple messages "
-                                        "or to clearly address specific mesasge."},
+                                        "or to clearly address specific message."},
                                     },
                                 },
                             .required = {},
