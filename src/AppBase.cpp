@@ -48,7 +48,7 @@ AFuture<std::valarray<double>> contextEmbedding(ranges::range auto && rng) {
         basePrompt += "\n\n---\n\n";
     }
     OpenAIChat chat{.config = config::ENDPOINT_EMBEDDING};
-    return chat.embedding(basePrompt);
+    co_return co_await chat.embedding(basePrompt);
 }
 
 AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_new<ATimer>(200min)) {

@@ -312,7 +312,7 @@ AFuture<std::valarray<double>> OpenAIChat::embedding(AString input) {
             co_await AThread::asyncSleep(1min / 2);
             goto tryAgain;
         }
-        throw AException("Ollama error: " + message);
+        throw AException("Ollama error: {}"_format(message));
     }
 
     const auto& array = response["data"][0]["embedding"].asArray();
