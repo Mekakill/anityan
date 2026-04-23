@@ -32,6 +32,8 @@ namespace {
     constexpr auto LOG_TAG = "App";
     constexpr auto DIARY_DIR = "diary";
 
+    static std::default_random_engine gRandomEngine(std::time(nullptr));
+
     AEventLoop gEventLoop;
 
     class App : public AppBase {
@@ -329,7 +331,26 @@ Use absolute time in your queries.
             
             if (chat->notification_settings_) {
                 if (chat->notification_settings_->mute_for_ > 0) {
-                    co_return;
+                    // Alex2772 (Apr 23 2026):
+                    //
+                    // Added a probability to ignore a muted chat.
+                    //
+                    // If we always ignore a muted chat, i.e.,
+                    // ```cpp
+                    // co_return;
+                    // ```
+                    // LLM will read this only if:
+                    // - it occasionally called get_telegram_chats, and
+                    // - it recognized a telegram chat with a lot of messages, and
+                    // - it decided to read it
+                    // which basically means LLM will NEVER read a muted chat.
+                    //
+                    // I've added a PROBABILITY to ignore a muted chat. This allows the account holder to mute the chat,
+                    // so LLM will give a lot less attention to it. This is useful for spammy chat.
+                    // If the account holder wants Kuni to ignore the chat completely, they should archive the chat.
+                    if (std::uniform_real_distribution<>(0.0, 1.0)(gRandomEngine) < 0.8) {
+                        co_return;
+                    }
                 }
             }
             auto notification = "<notification chat_id=\"{}\">\n"_format(chat->id_);
@@ -953,8 +974,7 @@ on them.
                                 maxSimilarity = std::max(maxSimilarity, similiarity);
                                 if (similiarity > config::REPEAT_YOURSELF_TRIGGER_MAX) {
                                     ALogger::warn(LOG_TAG) << "LLM is repeating itself: (maxSimilarity=" << maxSimilarity << ")" << message;
-                                    static std::default_random_engine re(std::time(nullptr));
-                                    if (std::uniform_real_distribution<>(0.0, 1.0)(re) < 0.1) {
+                                    if (std::uniform_real_distribution<>(0.0, 1.0)(gRandomEngine) < 0.1) {
                                         // Alex2772 (apr 6 2026):
                                         //
                                         // since the introduction of ask_diary and ask_google, we don't really need
