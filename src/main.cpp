@@ -137,40 +137,8 @@ namespace {
 
                     AString result =
                         "You are currently looking at Telegram's main screen. Use see the following chats:\n";
-                    for (auto& chat: chats) {
+                    co_await llmuiFormatChatList(result, chats);
 
-                        // Skip non-PAPIK chats in lockdown mode
-                        if constexpr (config::LOCKDOWN_MODE) {
-                            if (chat->id_ != config::PAPIK_CHAT_ID) {
-                                continue;
-                            }
-                        }
-                        
-                        auto type = [&]() -> AStringView {
-                            switch (chat->type_->get_id()) {
-                                case td::td_api::chatTypePrivate::ID: return "direct messages";
-                                case td::td_api::chatTypeBasicGroup::ID: return "group chat";
-                                case td::td_api::chatTypeSupergroup::ID: return "channel";
-                                default: return "unknown";
-                            }
-                        }();
-                        AString preview;
-                        if (chat->last_message_) {
-                            preview = co_await extractSenderName(*chat->last_message_);
-                            preview += ": ";
-                            extractMessageTypeAndText(preview, *chat->last_message_);
-                            preview.replaceAll("\n", " ");
-
-                            if (preview.length() > 80) {
-                                preview = preview.substr(0, 30) + "..." + preview.substr(preview.length() - 30);
-                            }
-                        }
-                        result += "<chat chat_id=\"{}\" title=\"{}\" preview=\"{}\" type=\"{}\""_format(chat->id_, chat->title_, preview, type);
-                        if (chat->unread_count_ > 0) {
-                            result += " unread_count=\"{}\""_format(chat->unread_count_);
-                        }
-                        result += " />\n";
-                    }
                     result = co_await util::populateFromDiaryAIIfNeeded(temporaryContext(), diary(), "main_screen", R"(
 {}
 
@@ -186,6 +154,9 @@ Use absolute time in your queries.
 - chat rules
 - responsibilities
 )"_format(result, util::formatPastHours())) + result;
+                    result += "<instructions>\n"
+                    "Chat list view is limited. Use #search_chats to search for a specific chat.\n"
+                    "</instructions>";
                     co_return result;
                 },
             });
@@ -215,6 +186,39 @@ Use absolute time in your queries.
                     co_return co_await llmuiOpenTelegramChat(ctx.tools, chatId);
                 },
             });
+            actions.insert({
+                .name = "search_chats",
+                .description = "Searches for chats by @username or name.",
+                .parameters =
+                    {
+                        .properties =
+                            {
+                                {"query", {.type = "string", .description = "The username or name of the "
+                                    "chat. Examples: \n"
+                                    "- @alex2772sc\n"
+                                    "- Alex2772\n"
+                                }},
+                            },
+                        .required = {"query"},
+                    },
+                .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
+                    auto query = ctx.args["query"].asStringOpt().valueOrException("query string is required");
+                    if (query.startsWith("@")) {
+                        query = query.substr(1);
+                    }
+                    auto queryResult = co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(td::td_api::searchChatsOnServer(query, 50)));
+
+                    if (queryResult->chat_ids_.empty()) {
+                        co_return "No chats found satisfying your query.";
+                    }
+
+                    AString result;
+                    auto chats = co_await chatIdsToChats(queryResult->chat_ids_);
+                    co_await llmuiFormatChatList(result, chats);
+
+                    co_return result;
+                },
+            });
         }
 
         AFuture<> onBeforeMainLoop() override {
@@ -225,19 +229,61 @@ Use absolute time in your queries.
     private:
         _<TelegramClient> mTelegram = _new<TelegramClient>();
 
-        AFuture<AVector<td::td_api::object_ptr<td::td_api::chat>>> getChats() {
-            auto chats = (co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(
-                td::td_api::getChats(TelegramClient::toPtr(td::td_api::chatListMain()), 50))))->chat_ids_
-                | ranges::view::transform([&](td::td_api::int53 chatId) {
+        [[nodiscard]]
+        AFuture<> llmuiFormatChatList(AString& result, std::span<td::td_api::object_ptr<td::td_api::chat>> chats) {
+            for (auto& chat: chats) {
+                // Skip non-PAPIK chats in lockdown mode
+                if constexpr (config::LOCKDOWN_MODE) {
+                    if (chat->id_ != config::PAPIK_CHAT_ID) {
+                        continue;
+                    }
+                }
+
+                auto type = [&]() -> AStringView {
+                    switch (chat->type_->get_id()) {
+                        case td::td_api::chatTypePrivate::ID: return "direct messages";
+                        case td::td_api::chatTypeBasicGroup::ID: return "group chat";
+                        case td::td_api::chatTypeSupergroup::ID: return "channel";
+                        default: return "unknown";
+                    }
+                }();
+                AString preview;
+                if (chat->last_message_) {
+                    preview = co_await extractSenderName(*chat->last_message_);
+                    preview += ": ";
+                    extractMessageTypeAndText(preview, *chat->last_message_);
+                    preview.replaceAll("\n", " ");
+
+                    if (preview.length() > 80) {
+                        preview = preview.substr(0, 30) + "..." + preview.substr(preview.length() - 30);
+                    }
+                }
+                result += "<chat chat_id=\"{}\" title=\"{}\" preview=\"{}\" type=\"{}\""_format(chat->id_, chat->title_, preview, type);
+                if (chat->unread_count_ > 0) {
+                    result += " unread_count=\"{}\""_format(chat->unread_count_);
+                }
+                result += " />\n";
+            }
+        }
+
+        AFuture<AVector<td::td_api::object_ptr<td::td_api::chat>>> chatIdsToChats(std::span<td::td_api::int53> ids) {
+            auto chats =
+                ids | ranges::view::transform([&](td::td_api::int53 chatId) {
                     return telegram()->sendQueryWithResult(TelegramClient::toPtr(td::td_api::getChat(chatId)));
-                })
-                | ranges::to_vector;
+                }) |
+                ranges::to_vector;
             AVector<td::td_api::object_ptr<td::td_api::chat>> result;
             result.reserve(chats.size());
             for (const auto& chat : chats) {
                 result.push_back(co_await chat);
             }
             co_return result;
+        }
+
+        AFuture<AVector<td::td_api::object_ptr<td::td_api::chat>>> getChats() {
+            auto chatList = co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(
+                td::td_api::getChats(TelegramClient::toPtr(td::td_api::chatListMain()), 50)));
+            co_return co_await chatIdsToChats(chatList->chat_ids_);
         }
 
         AFuture<> sendNotificationsOnInit() {
