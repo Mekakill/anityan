@@ -6,10 +6,10 @@ option(BUILD_SHARED_LIBS OFF)
 set(AUI_VERSION b5186aaf5f78ad6756c04aad3992ac8d3a07d319)
 
 # Use AUI.Boot
-#file(
-#        DOWNLOAD
-#        https://raw.githubusercontent.com/aui-framework/aui/${AUI_VERSION}/aui.boot.cmake
-#        ${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
+file(
+        DOWNLOAD
+        https://raw.githubusercontent.com/aui-framework/aui/7aac4a2b15238bbf7d25fcf029e914dbc1f02413/aui.boot.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
 set(AUI_COROUTINES "Use C++20 coroutines" ON)
