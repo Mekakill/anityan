@@ -601,7 +601,14 @@ Use absolute time in your queries.
                                                        AStringView xmlTag = "message") {
             AString senderName = co_await extractSenderName(msg);
             AString formattedXmlTag = "{} message_id=\"{}\" date=\"{}\""_format(xmlTag, msg.id_, std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>(std::chrono::seconds(msg.date_)));
-            if (chat.last_read_outbox_message_id_ < msg.id_) {
+            int64_t senderId {};
+            td::td_api::downcast_call(
+                *msg.sender_id_,
+                aui::lambda_overloaded {
+                  [&](td::td_api::messageSenderUser& user) { senderId = user.user_id_; },
+                  [&](td::td_api::messageSenderChat& chat) { senderId = chat.chat_id_; },
+                });
+            if (senderId != mTelegram->myId() && chat.last_read_inbox_message_id_ <= msg.id_) {
                 formattedXmlTag += " unread";
             }
             if (msg.forward_info_) {
@@ -717,7 +724,7 @@ Use absolute time in your queries.
             td::td_api::array<td::td_api::object_ptr<td::td_api::message>> messages;
             {
                 int64_t fromMessage = 0;
-                while (ranges::accumulate(messages, size_t(0), std::plus{}, [](const td::td_api::object_ptr<td::td_api::message>& msg) { return to_string(msg->content_).length(); }) < 10000) {
+                while (ranges::accumulate(messages, size_t(0), std::plus{}, [](const td::td_api::object_ptr<td::td_api::message>& msg) { return to_string(msg->content_).length(); }) < config::CHAT_MAX_CHARS_LENGTH) {
                     auto response =
                         co_await mTelegram->sendQueryWithResult(TelegramClient::toPtr(td::td_api::getChatHistory(
                             chatId, fromMessage, 0, 5,
@@ -731,6 +738,12 @@ Use absolute time in your queries.
                         AUI_ASSERT(!ranges::any_of(messages, [&](const auto& m) { return m->id_ == msg->id_; }));
                         #endif
                         messages.push_back(std::move(msg));
+                    }
+
+                    const auto& lastMessage = messages.back();
+                    if (chat->last_read_inbox_message_id_ > lastMessage->id_) {
+                        // no need to load more messages because we reached read ones.
+                        break;
                     }
                 }
             }
