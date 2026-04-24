@@ -19,7 +19,7 @@ checks.
 Feel free to chat and ask questions:  
 
 - **Discord**: [![discord badge](https://dcbadge.limes.pink/api/server/https://discord.gg/jq2WySpg6m?style=flat)](https://discord.gg/jq2WySpg6m)
-- **Telegram**: https://t.me/+a9VNzHJnBcVkNjAy
+- **Telegram**: https://t.me/kuni_loverz
 
 ## Technical details
 
