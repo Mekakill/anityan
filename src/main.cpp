@@ -985,6 +985,7 @@ on them.
                                 mTemporaryContext.last().content.bytes().insert(0, takeDiaryEntry(i).toStdString());
                             };
 
+                            static double giveAHeadStart = 0.0;
                             size_t countOfKunisMessages = 0;
                             for (auto& i : *messages) {
                                 if (i->sender_id_->get_id() != td::td_api::messageSenderUser::ID) {
@@ -1002,7 +1003,8 @@ on them.
                                 const auto similiarity = util::cosine_similarity(target, embedding);
                                 avgSimilarity += similiarity;
                                 maxSimilarity = std::max(maxSimilarity, similiarity);
-                                if (similiarity > config::REPEAT_YOURSELF_TRIGGER_MAX) {
+                                if (similiarity > config::REPEAT_YOURSELF_TRIGGER_MAX + giveAHeadStart) {
+                                    giveAHeadStart += 0.07; // relax repeating after itself check
                                     ALogger::warn(LOG_TAG) << "LLM is repeating itself: (maxSimilarity=" << maxSimilarity << ")" << message;
                                     if (std::uniform_real_distribution<>(0.0, 1.0)(gRandomEngine) < 0.1) {
                                         // Alex2772 (apr 6 2026):
@@ -1045,7 +1047,8 @@ on them.
                                 }
                             }
                             avgSimilarity /= countOfKunisMessages;
-                            if (avgSimilarity > config::REPEAT_YOURSELF_TRIGGER_AVG) {
+                            if (avgSimilarity > config::REPEAT_YOURSELF_TRIGGER_AVG + giveAHeadStart) {
+                                giveAHeadStart += 0.07; // relax repeating after itself check
                                 // LLM figured out threshold of REPEAT_YOURSELF_TRIGGER_MAX and indeed it generates
                                 // slightly more variative responses, but their general direction and structure feels
                                 // the same, stalling the dialogue.
@@ -1065,6 +1068,8 @@ on them.
                                 throw AException(config::REPEAT_YOURSELF_PROMPT);
                             }
 
+                            giveAHeadStart = 0.0; // reset indulgence
+
                             if (embeddings.size() >= config::REPEAT_YOURSELF_MAX_HISTORY) {
                                 ALOG_DEBUG(LOG_TAG) << "Dropped \"repeat yourself\" history";
                                 embeddings.clear();
@@ -1076,7 +1081,7 @@ on them.
 
                         // random wait. You definitely don't want to receive 4 large messages in 1 sec right?
                         static std::default_random_engine re(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-                        static std::uniform_int_distribution<int> dist(50, 100);
+                        static std::uniform_int_distribution<int> dist(1, 10);
                         co_await AThread::asyncSleep((message.length() + 1) * dist(re) * 1ms);
 
 
