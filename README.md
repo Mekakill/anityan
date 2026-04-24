@@ -195,11 +195,15 @@ cd build
 **Note** on the first run, the program will ask to login to a Telegram account. You should create a new Telegram
 account specifically for your bot (or specify your own account if you are brave enough).
 
-### 2. Run Tests
+### 2. Run Tests (recommended)
+
+Check your setup by running tests.
+
 ```bash
 # Build and run tests
 cmake --build build --target Tests
-cd build && ctest --output-on-failure
+cd build/bin
+./Tests
 ```
 
 ### 3. Development Workflow
