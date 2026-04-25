@@ -63,6 +63,7 @@ jobs:
           libfontconfig-dev \
           ninja-build \
           libpulse-dev \
+          gperf
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
