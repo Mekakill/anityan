@@ -286,7 +286,9 @@ _<OpenAIChat::StreamingResponse> OpenAIChat::chatStreaming(AVector<Message> mess
 }
 
 AFuture<std::valarray<double>> OpenAIChat::embedding(AString input) {
-    AUI_ASSERT(!input.empty());
+    if (input.empty()) {
+        input = " ";
+    }
     AVector<AString> headers = {"Content-Type: application/json"};
     if (!config.endpoint.bearerKey.empty()) {
         headers << "Authorization: Bearer {}"_format(config.endpoint.bearerKey);
