@@ -724,7 +724,7 @@ Use absolute time in your queries.
             td::td_api::array<td::td_api::object_ptr<td::td_api::message>> messages;
             {
                 int64_t fromMessage = 0;
-                while (ranges::accumulate(messages, size_t(0), std::plus{}, [](const td::td_api::object_ptr<td::td_api::message>& msg) { return to_string(msg->content_).length(); }) < config::CHAT_MAX_CHARS_LENGTH) {
+                for (;;) {
                     auto response =
                         co_await mTelegram->sendQueryWithResult(TelegramClient::toPtr(td::td_api::getChatHistory(
                             chatId, fromMessage, 0, 5,
@@ -738,6 +738,14 @@ Use absolute time in your queries.
                         AUI_ASSERT(!ranges::any_of(messages, [&](const auto& m) { return m->id_ == msg->id_; }));
                         #endif
                         messages.push_back(std::move(msg));
+                    }
+                    const auto length = ranges::accumulate(messages, size_t(0), std::plus{}, [](const td::td_api::object_ptr<td::td_api::message>& msg) { return to_string(msg->content_).length(); });
+                    if (length >= config::CHAT_MAX_CHARS_LENGTH) {
+                        break;
+                    }
+
+                    if (length < config::CHAT_MIN_CHARS_LENGTH) {
+                        continue;
                     }
 
                     const auto& lastMessage = messages.back();
