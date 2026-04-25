@@ -122,6 +122,16 @@ It is possible to inspire Kuni to share past conversations with other people.
 - **Docker & Docker Compose** (for AI services)
 - **Linux or WSL** are recommended for local deployment.
 
+### Ubuntu
+```bash
+sudo apt install pkg-config libfontconfig-dev libxcursor-dev libxi-dev libxrandr-dev libglew-dev libstdc++-static libpulse-dev libdbus-1-dev libepoxy-dev
+```
+
+### Fedora
+```bash
+sudo dnf install fontconfig-devel libXi libglvnd-devel libstdc++-static glew-devel pulseaudio-libs-devel libepoxy-devel
+```
+
 ## Setup Instructions
 
 ### 1. Ollama Model Setup
