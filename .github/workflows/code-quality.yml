@@ -41,6 +41,7 @@ jobs:
           libfontconfig-dev \
           ninja-build \
           libpulse-dev \
+          gperf \
 
       - name: clang-tidy verify config
         run: bash -c 'OUT=$(clang-tidy --dump-config 2>&1); echo "$OUT"; if echo "$OUT" | grep -q "error:"; then exit -1; fi'
@@ -81,6 +82,7 @@ jobs:
           libfontconfig-dev \
           ninja-build \
           libpulse-dev \
+          gperf \
 
 
       - name: Configure CMake asan
