@@ -3,12 +3,12 @@ project(kuni VERSION 1.0.0)
 
 option(BUILD_SHARED_LIBS OFF)
 
-set(AUI_VERSION b5186aaf5f78ad6756c04aad3992ac8d3a07d319)
+set(AUI_VERSION bac7de081721c92b8d94d9cbbfa3c4b94ad3baf1)
 
 # Use AUI.Boot
 file(
         DOWNLOAD
-        https://raw.githubusercontent.com/aui-framework/aui/7aac4a2b15238bbf7d25fcf029e914dbc1f02413/aui.boot.cmake
+        https://raw.githubusercontent.com/aui-framework/aui/${AUI_VERSION}/aui.boot.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/aui.boot.cmake)
 
