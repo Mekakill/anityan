@@ -1,6 +1,5 @@
 #pragma once
 #include <chrono>
-#include <secrets.h>
 
 #include "Endpoint.h"
 
@@ -343,17 +342,17 @@ world) in the following format:
 
     static const EndpointAndModel ENDPOINT_MAIN {
         .endpoint = {
-            // .baseUrl = "http://localhost:11434/v1/",
-            .baseUrl = "https://api.deepseek.com/",
-            .bearerKey = secrets::DEEPSEEK_BEARER_KEY,
+            .baseUrl = "http://localhost:11434/v1/",
+            // .baseUrl = "https://api.deepseek.com/",
+            // .bearerKey = secrets::DEEPSEEK_BEARER_KEY,
         },
         // .model = "qwen3:14b",
-        .model = "deepseek-chat",
+        // .model = "deepseek-chat",
         // .model = "deepseek-reasoner",
 
         // .model = "gpt-oss-20b-128k:latest"; // норм но тупая
         // .model = "lfm2"; // не может вызвать тулы
-        // .model = "qwen3.5:9b"; // более общительная и легкомысленная. реасонинг всё равно говно
+        .model = "qwen3.5:9b", // более общительная и легкомысленная. реасонинг всё равно говно
         // .model = "magistral:latest"; // не вызывает тулы
     };
 
@@ -772,4 +771,14 @@ medium breasts
 <lora:Iridescence:1>
 )";
   static constexpr auto SD_CHECKPOINT = "novaAnimeXL_ilV170.safetensors";
+
+
+  static constexpr auto REPEAT_YOURSELF_PROMPT = R"(
+You are repeating after yourself, which means the message you have tried to send is a low quality response from you.
+
+- if conversation is reached to the end or participants don't give you an opportunity for a follow-up, or they are being
+  rude, call #wait. It's better to stay silent rather than providing bad response.
+- if you didn't address a question, use #ask_google to search in the internet. Use #ask_diary instead if conversation
+  suggests an information that can't be found in public (i.e., specific to you).
+)";
 } // namespace config

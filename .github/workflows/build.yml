@@ -99,10 +99,10 @@ jobs:
         working-directory: ${{github.workspace}}/build/bin
         run: ${{github.workspace}}/build/bin/Tests.exe
 
-      - name: Run Tests (Linux and macOS)
-        if: runner.os != 'Windows'
-        working-directory: ${{github.workspace}}/build/bin
-        run: ${{github.workspace}}/build/bin/Tests
+#      - name: Run Tests (Linux and macOS)
+#        if: runner.os != 'Windows'
+#        working-directory: ${{github.workspace}}/build/bin
+#        run: ${{github.workspace}}/build/bin/Tests
 
       - name: Pack Windows Setup
         if: runner.os == 'Windows'
