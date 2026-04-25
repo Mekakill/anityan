@@ -124,12 +124,12 @@ It is possible to inspire Kuni to share past conversations with other people.
 
 ### Ubuntu
 ```bash
-sudo apt install pkg-config libfontconfig-dev libxcursor-dev libxi-dev libxrandr-dev libglew-dev libstdc++-static libpulse-dev libdbus-1-dev libepoxy-dev
+sudo apt install pkg-config libfontconfig-dev libxcursor-dev libxi-dev libxrandr-dev libglew-dev libstdc++-static libpulse-dev libdbus-1-dev libepoxy-dev gperf
 ```
 
 ### Fedora
 ```bash
-sudo dnf install fontconfig-devel libXi libglvnd-devel libstdc++-static glew-devel pulseaudio-libs-devel libepoxy-devel
+sudo dnf install fontconfig-devel libXi libglvnd-devel libstdc++-static glew-devel pulseaudio-libs-devel libepoxy-devel gperf
 ```
 
 ## Setup Instructions
