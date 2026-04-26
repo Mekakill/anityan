@@ -25,7 +25,6 @@ Feel free to chat and ask questions:
 
 - C++20 CMake-based project with heavy usage of modern C++ features such as coroutines
 - Uses [tdlib](https://core.telegram.org/tdlib) for Telegram API access
-- Used with a self-hosted Ollama server through OpenAI API.
 
 # Human behavior replication
 
@@ -122,6 +121,10 @@ It is possible to inspire Kuni to share past conversations with other people.
 - **Docker & Docker Compose** (for AI services)
 - **Linux or WSL** are recommended for local deployment.
 
+### Windows
+
+Install Ubuntu in WSL and follow Linux instructions.
+
 ### Ubuntu
 ```bash
 sudo apt install pkg-config libfontconfig-dev libxcursor-dev libxi-dev libxrandr-dev libglew-dev libstdc++-static libpulse-dev libdbus-1-dev libepoxy-dev gperf
@@ -178,6 +181,10 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
+**Alternative using CLion:**
+This is a **recommended** way that requires no additional setup. Select `kuni` as a target and build.
+
+
 **Alternative using VS Code CMake Tools:**
 1. Open the project in VS Code
 2. Use the CMake extension to configure and build
@@ -189,6 +196,18 @@ The project uses CMake's `auib_import` to automatically fetch:
 - **tdlib** (Telegram client library)
 
 These are automatically downloaded during the CMake configuration phase.
+
+## Setup recommendations
+
+I ended up delegating text processing to Deepseek as they provide good enough cheap models. However, they don't provide vision models (required for viewing images/assessing generated images).
+
+Kuni's architecture allows incorporating a text-only "core" model.
+
+In my deployment, I use local vision models to process visual information. (24GB VRAM).
+
+You will need a server or an always-on PC to host Kuni instance (hosting your own catgirl is an expensive hobby).
+
+You can tinker with my setup by adjusting `docker-compose.yml`, `ollama_setup.sh` and `src/config.h`.
 
 ## Run Instructions
 
@@ -227,7 +246,6 @@ cd build/bin
 - `tests/` - Unit tests
 - `bin/` - Data directories for AI services
 - `build/` - Build artifacts
-- `cmake-build-debug/` - Debug build directory
 
 ## Key Configuration Files
 - `CMakeLists.txt` - Build configuration
@@ -270,3 +288,65 @@ Both files are located in the working directory and can be edited to customize K
 2. **Telegram authentication** will be interactive on first run
 3. **AI services** must be running before the application starts
 4. **Memory/diary data** is stored in the `data/` directory (created at runtime)
+
+# FAQ
+
+## Q: How can I rename my Kuni instance?
+
+A: replace `Kuni` with `CuteAnimeGirlName` across whole project, including `character_base.md` and `character_appearance.md`. Rebuild and restart.
+
+
+## Q: How can I make my Kuni treat me as her creator?
+
+A: replace `Alex2772` with `YourNerdyNickname` across whole project, including `character_base.md` and `character_appearance.md`. Rebuild and restart.
+
+## Q: Can I disable some of her functionality, i.e. stable diffusion and web search?
+
+A: Yes, just don't launch stable diffusion (remove it from docker compose).
+
+Don't specify Ollama search bearer key. I still recommend providing this key because it's free and it will improve her accuracy especially for small models.
+
+In both cases, if your Kuni attempts to use these tools, it will receive an error and will no longer use them.
+
+## Q: Can I prioritize a chat?
+
+A: Yes, just log in from her account from a regular Telegram client and pin the chat.
+
+## Q: Can I deprioritize a chat?
+
+A: Yes, just log in from her account from a regular Telegram client and mute the chat. Kuni will still see the chat and visit it but rarely.
+
+## Q: Can I provide a news channel for her?
+
+A: Yes, just log in from her account from a regular Telegram client and subscribe to a Telegram channel. Kuni will now known what's going on in
+the world.
+
+**Note** Both original Kuni and her sisters don't like to discuss political stuff.
+
+## Q: Can I prevent other people to text my Kuni?
+
+A: Yes, just log in from her account from a regular Telegram client and adjust her privacy settings.
+
+**I recommend** locking down your Kuni completely to reduce security risks.
+
+**Note** Telegram pushes premium users so hard, make sure they can't text your Kuni as well.
+
+## Q: Can I use a local text model with her?
+
+A: Yes, of course, as soon as you are a billionaire, or you are okay with slow responses.
+
+I have experimented with models and described my experience in `src/config.h`. I.e., `qwen3.5:9b` is stupid AF compared to cloud models.
+
+
+## Q: Can I overwrite her memory?
+
+A: moral stuff aside, yes. Just write to diary entries in `data/diary/`, or text from her account.
+
+DON'T TELL HER YOU HAVE OVERWRITTEN HER MEMORY.
+
+
+## Q: What context window size does Kuni require?
+
+A: By default, context window size is soft capped by `DIARY_TOKEN_COUNT_TRIGGER = 20000`. This means somewhere around 20K Kuni will dump her context
+to the diary and restart with clean memory. Thus, 32K will be enough.
+
