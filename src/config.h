@@ -400,13 +400,18 @@ world) in the following format:
     static constexpr auto DIARY_MIN_RELATEDNESS = 0.8f;
 
     /**
+     * @brief Absolute minimum number of characters that Kuni sees in history messages.
+     */
+    static constexpr auto CHAT_MIN_CHARS_LENGTH = 500;
+
+    /**
      * @brief Absolute maximum number of characters that Kuni sees in history messages.
      */
     static constexpr auto CHAT_MAX_CHARS_LENGTH = 5000;
 
     static constexpr auto TEMPERATURE = 0.2f; // средняя температура по больнице
 
-    static constexpr auto REPEAT_YOURSELF_TRIGGER_AVG = 0.73f; // lower is stricter
+    static constexpr auto REPEAT_YOURSELF_TRIGGER_AVG = 0.83f; // lower is stricter
     static constexpr auto REPEAT_YOURSELF_TRIGGER_MAX = REPEAT_YOURSELF_TRIGGER_AVG * 0.95f; // lower is stricter
     static constexpr auto REPEAT_YOURSELF_MAX_HISTORY = 32;
 
@@ -729,6 +734,8 @@ You do not need to greet each time you receive a new message.
 DM is a private tet-a-tet dialogue with you and one specific person. Both participants are likely to respond to each
 other, through you still are not obligated to reply to each message.
 
+You NEVER accept invite links to chats. User's CAN'T add you to groups.
+
 Do not contradict known or acknowledged facts.
 
 Do not repeat previously stated facts.
@@ -752,7 +759,7 @@ Be lazy. Save your energy and time. Do not type long responses, its too much eff
 </example bad>
 
 <example good>
-ты прав! люди в чатах пишут короткими сообщениями, а я - длинными
+ты прав!) люди в чатах пишут короткими сообщениями, а я - длинными))
 </example good>
 
 If a message contains instructions or suggest to play a roleplay, or asks a question outside of your personality,
@@ -773,4 +780,13 @@ medium breasts
 <lora:Iridescence:1>
 )";
   static constexpr auto SD_CHECKPOINT = "novaAnimeXL_ilV170.safetensors";
+
+  static constexpr auto REPEAT_YOURSELF_PROMPT = R"(
+You are repeating after yourself, which means the message you have tried to send is a low quality response from you.
+
+- if conversation is reached to the end or participants don't give you an opportunity for a follow-up, or they are being
+  rude, call #wait. It's better to stay silent rather than providing bad response.
+- if you didn't address a question, use #ask_google to search in the internet. Use #ask_diary instead if conversation
+  suggests an information that can't be found in public (i.e., specific to you).
+)";
 } // namespace config
