@@ -124,7 +124,8 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
                 }
                 auto notification = std::move(self.mNotifications.front());
                 self.mNotifications.pop_front();
-                notification.message += "\nCurrent time: {}"_format(std::chrono::system_clock::now());
+                notification.message += "\nCurrent time: {} UTC"_format(std::chrono::system_clock::now());
+                notification.onStartedProcessing.supplyValue();
                 AUI_DEFER { notification.onProcessed.supplyValue(); };
                 try {
                     if (notification.actions.handlers().size() == 1) {
@@ -323,8 +324,8 @@ AppBase::AppBase(APath workingDir): mDiary(workingDir / "diary"), mWakeupTimer(_
     });
 }
 
-const AFuture<>& AppBase::passNotificationToAI(AString notification, OpenAITools actions, bool first) {
-    const auto& result = mNotifications.emplace(first ? mNotifications.begin() : mNotifications.end(), std::move(notification), std::move(actions))->onProcessed;
+const AppBase::Notification& AppBase::passNotificationToAI(AString notification, OpenAITools actions, bool first) {
+    const auto& result = *mNotifications.emplace(first ? mNotifications.begin() : mNotifications.end(), std::move(notification), std::move(actions));
     mNotificationsSignal.supplyValue();
     return result;
 }
@@ -407,10 +408,17 @@ void AppBase::actProactively() {
 It's time to reflect on your thoughts!
   - maybe make some reasoning?\n"
   - maybe do some reflection?\n"
-  - maybe write to a person and initiate a dialogue with #send_telegram_message?\n"
+  - maybe write to a person and initiate a dialogue? whom you would like to write? maybe call #get_telegram_chats? You
+    can open one chat at a time - choose wisely!\n"
 Act proactively!
 )";
-    passNotificationToAI(std::move(prompt));
+    const auto& notification = passNotificationToAI(std::move(prompt));
+    notification.onStartedProcessing.onSuccess([&] {
+        mActingProactively = true;
+    });
+    notification.onProcessed.onSuccess([&] {
+        mActingProactively = false;
+    });
 }
 
 

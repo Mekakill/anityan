@@ -24,6 +24,7 @@
 
 #include <range/v3/action/reverse.hpp>
 #include <range/v3/algorithm/contains.hpp>
+#include <range/v3/algorithm/remove_if.hpp>
 #include <range/v3/algorithm/sort.hpp>
 
 using namespace std::chrono_literals;
@@ -137,6 +138,17 @@ namespace {
                     // however, LLM sometimes decides to prioritize people, based on message preview, count and
                     // a person.
                     chats |= ranges::actions::reverse;
+
+                    if (isActingProactively()) {
+                        // the whole point of "acting proactively" is to revisit older chats with no activity (no inbox
+                        // messages). LLM is likely to call get_telegram_chats during acting proactively, so we remove
+                        // active chats from the output during "acting proactively" phase.
+                        //
+                        // don't worry about active chats -- LLM will receive notifications from them anyway.
+                        chats.removeIf([](const td::td_api::object_ptr<td::td_api::chat>& chat) {
+                            return chat->unread_count_ > 0;
+                        });
+                    }
 
                     AString result =
                         "You are currently looking at Telegram's main screen. Use see the following chats:\n";
