@@ -26,37 +26,6 @@ static constexpr auto LOG_TAG = "OpenAIChat";
 using namespace std::chrono_literals;
 
 
-AJSON_FIELDS(OpenAIChat::Message::ToolCall::Function,
-             (name, "name", AJsonFieldFlags::OPTIONAL)
-             (arguments, "arguments", AJsonFieldFlags::OPTIONAL)
-             )
-
-AJSON_FIELDS(OpenAIChat::Message::ToolCall,
-             (id, "id", AJsonFieldFlags::OPTIONAL)
-             (type, "type", AJsonFieldFlags::OPTIONAL)
-             (function, "function", AJsonFieldFlags::OPTIONAL)
-             AJSON_FIELDS_ENTRY(index))
-
-AJSON_FIELDS(OpenAIChat::Message,
-             (role, "role", AJsonFieldFlags::OPTIONAL)
-             (content, "content", AJsonFieldFlags::OPTIONAL)
-             (reasoning, "reasoning", AJsonFieldFlags::OPTIONAL)
-             (reasoning_content, "reasoning_content", AJsonFieldFlags::OPTIONAL)
-             (tool_call_id, "tool_call_id", AJsonFieldFlags::OPTIONAL)(tool_calls, "tool_calls",
-                                                                          AJsonFieldFlags::OPTIONAL))
-
-AJSON_FIELDS(OpenAIChat::Response::Choice,
-             AJSON_FIELDS_ENTRY(index) AJSON_FIELDS_ENTRY(message) AJSON_FIELDS_ENTRY(finish_reason))
-
-AJSON_FIELDS(OpenAIChat::Response,
-             AJSON_FIELDS_ENTRY(id) AJSON_FIELDS_ENTRY(object) AJSON_FIELDS_ENTRY(created) AJSON_FIELDS_ENTRY(model)
-                 AJSON_FIELDS_ENTRY(system_fingerprint) AJSON_FIELDS_ENTRY(choices) AJSON_FIELDS_ENTRY(usage))
-
-AJSON_FIELDS(OpenAIChat::Response::Usage,
-             AJSON_FIELDS_ENTRY(prompt_tokens) AJSON_FIELDS_ENTRY(completion_tokens) AJSON_FIELDS_ENTRY(total_tokens)
-
-)
-
 struct StreamingResponse {
     AString id;
     AString object;
