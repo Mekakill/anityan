@@ -1100,11 +1100,14 @@ on them.
                         }
 
 
+                        mTelegram->sendQuery(TelegramClient::toPtr(td::td_api::sendChatAction(chat->id_, {}, {}, TelegramClient::toPtr(td::td_api::chatActionTyping()))));
+
                         // random wait. You definitely don't want to receive 4 large messages in 1 sec right?
                         static std::default_random_engine re(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-                        static std::uniform_int_distribution<int> dist(1, 10);
+                        static std::uniform_int_distribution<int> dist(10, 50);
                         co_await AThread::asyncSleep((message.length() + 1) * dist(re) * 1ms);
 
+                        mTelegram->sendQuery(TelegramClient::toPtr(td::td_api::sendChatAction(chat->id_, {}, {}, TelegramClient::toPtr(td::td_api::chatActionTyping()))));
 
                         // handle photo_filename
                         AOptional<_<AImage>> photo;
