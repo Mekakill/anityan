@@ -5,8 +5,8 @@
 #include "Endpoint.h"
 
 namespace config {
-    static constexpr bool RANDOMLY_GO_SLEEP = true;
-    static constexpr bool DEEP_DIALOG_QUERY = true;
+    static constexpr bool RANDOMLY_GO_SLEEP = false;
+    static constexpr bool DEEP_DIALOG_QUERY = false;
 
     static constexpr auto SYSTEM_PROMPT = R"(
 Follow the user's requirements carefully & to the letter.
@@ -347,10 +347,12 @@ world) in the following format:
         .model = "deepseek-chat",
         // .model = "deepseek-reasoner",
 
-        // .model = "gpt-oss-20b-128k:latest"; // норм но тупая
-        // .model = "lfm2"; // не может вызвать тулы
-        // .model = "qwen3.5:9b"; // более общительная и легкомысленная. реасонинг всё равно говно
-        // .model = "magistral:latest"; // не вызывает тулы
+        // .model = "gpt-oss-20b-128k:latest", // норм но тупая
+        // .model = "lfm2", // не может вызвать тулы
+         // .model = "gemma4:26b",
+        // .model = "gemma4:31b", // норм но не лезет
+        // .model = "qwen3.5:9b", // более общительная и легкомысленная. реасонинг всё равно говно
+        // .model = "magistral:latest", // не вызывает тулы
     };
 
     static const EndpointAndModel ENDPOINT_PHOTO_TO_TEXT {
