@@ -19,7 +19,7 @@ checks.
 Feel free to chat and ask questions:  
 
 - **Discord**: [![discord badge](https://dcbadge.limes.pink/api/server/https://discord.gg/jq2WySpg6m?style=flat)](https://discord.gg/jq2WySpg6m)
-- **Telegram**: https://t.me/+a9VNzHJnBcVkNjAy
+- **Telegram**: https://t.me/kuni_loverz
 
 ## Technical details
 
@@ -122,6 +122,16 @@ It is possible to inspire Kuni to share past conversations with other people.
 - **Docker & Docker Compose** (for AI services)
 - **Linux or WSL** are recommended for local deployment.
 
+### Ubuntu
+```bash
+sudo apt install pkg-config libfontconfig-dev libxcursor-dev libxi-dev libxrandr-dev libglew-dev libstdc++-static libpulse-dev libdbus-1-dev libepoxy-dev gperf
+```
+
+### Fedora
+```bash
+sudo dnf install fontconfig-devel libXi libglvnd-devel libstdc++-static glew-devel pulseaudio-libs-devel libepoxy-devel gperf
+```
+
 ## Setup Instructions
 
 ### 1. Ollama Model Setup
@@ -195,11 +205,15 @@ cd build
 **Note** on the first run, the program will ask to login to a Telegram account. You should create a new Telegram
 account specifically for your bot (or specify your own account if you are brave enough).
 
-### 2. Run Tests
+### 2. Run Tests (recommended)
+
+Check your setup by running tests.
+
 ```bash
 # Build and run tests
 cmake --build build --target Tests
-cd build && ctest --output-on-failure
+cd build/bin
+./Tests
 ```
 
 ### 3. Development Workflow

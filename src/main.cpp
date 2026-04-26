@@ -601,7 +601,14 @@ Use absolute time in your queries.
                                                        AStringView xmlTag = "message") {
             AString senderName = co_await extractSenderName(msg);
             AString formattedXmlTag = "{} message_id=\"{}\" date=\"{}\""_format(xmlTag, msg.id_, std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>(std::chrono::seconds(msg.date_)));
-            if (chat.last_read_outbox_message_id_ < msg.id_) {
+            int64_t senderId {};
+            td::td_api::downcast_call(
+                *msg.sender_id_,
+                aui::lambda_overloaded {
+                  [&](td::td_api::messageSenderUser& user) { senderId = user.user_id_; },
+                  [&](td::td_api::messageSenderChat& chat) { senderId = chat.chat_id_; },
+                });
+            if (senderId != mTelegram->myId() && chat.last_read_inbox_message_id_ <= msg.id_) {
                 formattedXmlTag += " unread";
             }
             if (msg.forward_info_) {
@@ -717,7 +724,7 @@ Use absolute time in your queries.
             td::td_api::array<td::td_api::object_ptr<td::td_api::message>> messages;
             {
                 int64_t fromMessage = 0;
-                while (ranges::accumulate(messages, size_t(0), std::plus{}, [](const td::td_api::object_ptr<td::td_api::message>& msg) { return to_string(msg->content_).length(); }) < 10000) {
+                for (;;) {
                     auto response =
                         co_await mTelegram->sendQueryWithResult(TelegramClient::toPtr(td::td_api::getChatHistory(
                             chatId, fromMessage, 0, 5,
@@ -731,6 +738,20 @@ Use absolute time in your queries.
                         AUI_ASSERT(!ranges::any_of(messages, [&](const auto& m) { return m->id_ == msg->id_; }));
                         #endif
                         messages.push_back(std::move(msg));
+                    }
+                    const auto length = ranges::accumulate(messages, size_t(0), std::plus{}, [](const td::td_api::object_ptr<td::td_api::message>& msg) { return to_string(msg->content_).length(); });
+                    if (length >= config::CHAT_MAX_CHARS_LENGTH) {
+                        break;
+                    }
+
+                    if (length < config::CHAT_MIN_CHARS_LENGTH) {
+                        continue;
+                    }
+
+                    const auto& lastMessage = messages.back();
+                    if (chat->last_read_inbox_message_id_ > lastMessage->id_) {
+                        // no need to load more messages because we reached read ones.
+                        break;
                     }
                 }
             }
@@ -985,6 +1006,7 @@ on them.
                                 mTemporaryContext.last().content.bytes().insert(0, takeDiaryEntry(i).toStdString());
                             };
 
+                            static double giveAHeadStart = 0.0;
                             size_t countOfKunisMessages = 0;
                             for (auto& i : *messages) {
                                 if (i->sender_id_->get_id() != td::td_api::messageSenderUser::ID) {
@@ -1002,7 +1024,8 @@ on them.
                                 const auto similiarity = util::cosine_similarity(target, embedding);
                                 avgSimilarity += similiarity;
                                 maxSimilarity = std::max(maxSimilarity, similiarity);
-                                if (similiarity > config::REPEAT_YOURSELF_TRIGGER_MAX) {
+                                if (similiarity > config::REPEAT_YOURSELF_TRIGGER_MAX + giveAHeadStart) {
+                                    giveAHeadStart += 0.07; // relax repeating after itself check
                                     ALogger::warn(LOG_TAG) << "LLM is repeating itself: (maxSimilarity=" << maxSimilarity << ")" << message;
                                     if (std::uniform_real_distribution<>(0.0, 1.0)(gRandomEngine) < 0.1) {
                                         // Alex2772 (apr 6 2026):
@@ -1045,7 +1068,8 @@ on them.
                                 }
                             }
                             avgSimilarity /= countOfKunisMessages;
-                            if (avgSimilarity > config::REPEAT_YOURSELF_TRIGGER_AVG) {
+                            if (avgSimilarity > config::REPEAT_YOURSELF_TRIGGER_AVG + giveAHeadStart) {
+                                giveAHeadStart += 0.07; // relax repeating after itself check
                                 // LLM figured out threshold of REPEAT_YOURSELF_TRIGGER_MAX and indeed it generates
                                 // slightly more variative responses, but their general direction and structure feels
                                 // the same, stalling the dialogue.
@@ -1065,6 +1089,8 @@ on them.
                                 throw AException(config::REPEAT_YOURSELF_PROMPT);
                             }
 
+                            giveAHeadStart = 0.0; // reset indulgence
+
                             if (embeddings.size() >= config::REPEAT_YOURSELF_MAX_HISTORY) {
                                 ALOG_DEBUG(LOG_TAG) << "Dropped \"repeat yourself\" history";
                                 embeddings.clear();
@@ -1076,7 +1102,7 @@ on them.
 
                         // random wait. You definitely don't want to receive 4 large messages in 1 sec right?
                         static std::default_random_engine re(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-                        static std::uniform_int_distribution<int> dist(50, 100);
+                        static std::uniform_int_distribution<int> dist(1, 10);
                         co_await AThread::asyncSleep((message.length() + 1) * dist(re) * 1ms);
 
 

@@ -238,10 +238,6 @@ You can send messages via #send_telegram_message tool. It is available only when
 1. When received a message notification, respond with #open tool; or
 2. #get_telegram_chats to get chat ids and #open_chat_by_id to open the chat.
 
-When writing a message, use informal communication style, just like you are internet chatting with a friend. When the
-person who you are chatting with is known to you, it is appropriate to use sometimes coquetting and playful suffixes
-such as ~, ❤, :3, ^^, ^v^, ^_^.
-
 <example>
 <message sender="John">
 do u mind hanging out today?
@@ -401,6 +397,11 @@ world) in the following format:
     static constexpr auto DIARY_SLEEP_MAX_LENGTH = DIARY_AVERAGE_ENTRY_SIZE * 40;
     static constexpr auto DIARY_PLAGIARISM_THRESHOLD = 0.97f;
     static constexpr auto DIARY_MIN_RELATEDNESS = 0.8f;
+
+    /**
+     * @brief Absolute maximum number of characters that Kuni sees in history messages.
+     */
+    static constexpr auto CHAT_MAX_CHARS_LENGTH = 5000;
 
     static constexpr auto TEMPERATURE = 0.2f; // средняя температура по больнице
 
