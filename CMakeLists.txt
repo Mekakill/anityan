@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(example_app
+project(kuni
         VERSION 0.0.1 # CI_PROJECT_VERSION
     )
 
