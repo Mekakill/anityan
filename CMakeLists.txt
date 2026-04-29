@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
-project(kuni VERSION 1.0.0)
+project(example_app
+        VERSION 0.0.1 # CI_PROJECT_VERSION
+    )
+
 
 option(BUILD_SHARED_LIBS OFF)
 
