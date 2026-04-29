@@ -1,11 +1,13 @@
 #include "ImageGenerator.h"
+#include "common.h"
+
 #include <gmock/gmock.h>
 #include "AUI/Thread/AAsyncHolder.h"
 #include "AUI/Thread/AEventLoop.h"
 #include "config.h"
 #include "AUI/Image/png/PngImageLoader.h"
 
-TEST(ImageGenerator, Generate)
+TEST(ImageGeneratorIntegration, Generate)
 {
     AEventLoop loop;
     IEventLoop::Handle h(&loop);

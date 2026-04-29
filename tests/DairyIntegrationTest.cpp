@@ -10,7 +10,9 @@
 #include "config.h"
 
 
-TEST(Diary, Basic) {
+
+
+TEST(DiaryIntegration, Basic) {
     APath("test_data").removeFileRecursive();
     populateUnrelatedDiaryEntries();
     AEventLoop loop;
@@ -50,7 +52,7 @@ trigraph substitution, see /Zc:trigraphs (Trigraphs Substitution).
     }
 }
 
-TEST(Diary, Remember) {
+TEST(DiaryIntegration, Remember) {
     APath("test_data").removeFileRecursive();
     populateUnrelatedDiaryEntries();
     AEventLoop loop;
@@ -117,7 +119,7 @@ Guess which hero I was playing :)
     }
 }
 
-TEST(Diary, Query1) {
+TEST(DiaryIntegration, Query1) {
     APath("test_data").removeFileRecursive();
     populateUnrelatedDiaryEntries();
     Diary diary("test_data");
@@ -156,7 +158,7 @@ TEST(Diary, Query1) {
     }
 }
 
-TEST(Diary, AskDiary) {
+TEST(DiaryIntegration, AskDiary) {
     // I refer to hampsters' specific quote: "ВСЁ ПОШЛО БЫ ЛУЧШЕ, ЕСЛИ БЫ У ВСЕХ БЫЛИ ШАРЫ" (1774022551.md)
     // nobody really will remember that unless was told to. (Kuni was told about this quote in 1774022551.md).
     APath("test_data").removeFileRecursive();
@@ -180,7 +182,7 @@ TEST(Diary, AskDiary) {
     EXPECT_TRUE(result.contains("пошло бы лучше")) << result;
 }
 
-TEST(Diary, RealWorldChatHistorySneakyTopicSwitch) {
+TEST(DiaryIntegration, RealWorldChatHistorySneakyTopicSwitch) {
     // real world example: Kuni was not able to remember Wrecking Ball from Overwatch; although there are a lot of diary
     // entries related to that.
     // the reason for this is simple: CHAT_HISTORY embedding mostly refers to our dialogue with Kuni about memory
@@ -291,7 +293,7 @@ TEST(Diary, RealWorldChatHistorySneakyTopicSwitch) {
     }
 }
 
-TEST(Diary, ConversationNoFollowUp) {
+TEST(DiaryIntegration, ConversationNoFollowUp) {
     // real world example: Kuni was trying to generate a follow-up despite the conversion was ended in fact.
     // this is especially noticeable because its responses are usually long, and it repeats itself
     // humans don't work like that. people tend to be lazy.
@@ -369,7 +371,7 @@ TEST(Diary, ConversationNoFollowUp) {
     }
 }
 
-TEST(Diary, Merge) {
+TEST(DiaryIntegration, Merge) {
     APath("test_data").removeFileRecursive();
     Diary diary("test_data");
     diary.save({
@@ -401,7 +403,7 @@ TEST(Diary, Merge) {
     }
 }
 
-TEST(Diary, Split) {
+TEST(DiaryIntegration, Split) {
     APath("test_data").removeFileRecursive();
     Diary diary("test_data");
     diary.save({
