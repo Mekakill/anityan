@@ -377,8 +377,8 @@ world) in the following format:
             // .bearerKey = secrets::DEEPSEEK_BEARER_KEY,
         },
         // .model = "qwen3:14b",
-        // .model = "deepseek-chat",
-        // .model = "deepseek-reasoner",
+        // .model = "deepseek-v4-flash",
+        // .model = "deepseek-v4-pro",
         // .model = "gemma4:26b",
 
         // .model = "gpt-oss-20b-128k:latest"; // норм но тупая
