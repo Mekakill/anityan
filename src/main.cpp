@@ -558,31 +558,32 @@ Use absolute time in your queries.
         }
 
         AFuture<AString> describePhoto(AStringView pathToImage) {
-            if (const auto i = mImages.contains(pathToImage)) {
-                co_return i->second;
-            }
-            OpenAIChat chat {
-                .systemPrompt = config::PHOTO_TO_TEXT_PROMPT,
-                .config = config::ENDPOINT_PHOTO_TO_TEXT,
-
-                // hardcode the seed for img-to-text.
-                // since LLM is asked to preserve image descriptions verbatim, this would hopefully help it to recognize
-                // same or similar pictures during lifetime.
-                // also this helps with caching on the server side.
-                .seed = 1,
-            };
-            AString context = "<context>\n";
-            for (const auto& i : temporaryContext()) {
-                context += "<context_item>\n";
-                context += i.content;
-                context += "\n</context_item>\n";
-            }
-
-            context += "\n\n</context>\n\nPhoto:\n\n";
-            context += OpenAIChat::embedImage(*AImage::fromFile(pathToImage));
-            context += "\n\nDescribe the last photo.";
             try
             {
+                if (const auto i = mImages.contains(pathToImage)) {
+                    co_return i->second;
+                }
+                OpenAIChat chat {
+                    .systemPrompt = config::PHOTO_TO_TEXT_PROMPT,
+                    .config = config::ENDPOINT_PHOTO_TO_TEXT,
+
+                    // hardcode the seed for img-to-text.
+                    // since LLM is asked to preserve image descriptions verbatim, this would hopefully help it to recognize
+                    // same or similar pictures during lifetime.
+                    // also this helps with caching on the server side.
+                    .seed = 1,
+                };
+                AString context = "<context>\n";
+                for (const auto& i : temporaryContext()) {
+                    context += "<context_item>\n";
+                    context += i.content;
+                    context += "\n</context_item>\n";
+                }
+
+                context += "\n\n</context>\n\nPhoto:\n\n";
+                context += OpenAIChat::embedImage(*AImage::fromFile(pathToImage));
+                context += "\n\nDescribe the last photo.";
+
                 auto response = co_await chat.chat(std::move(context));
                 co_return mImages[pathToImage] = "<photo description>\n{}\n</photo>"_format(response.choices.at(0).message.content);
             } catch (const AException& e)
