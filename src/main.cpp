@@ -302,9 +302,9 @@ Use absolute time in your queries.
                 .name = "remove_and_ban_chat",
                 .description = "Removes specified chat from chat list. If a chat is a DM with a user, prevents this "
                     "specific user to DM you.\n"
-                    "You must use this if:\n"
-                    "- you don't like this chat;\n"
-                    "- participant(s) are rude to you;\n"
+                    "You should use this if:\n"
+                    "- you don't like this chat and person;\n"
+                    "- participant(s) are consistently rude to you (use #ask_diary beforehand before making a final decision);\n"
                     "- they are needy:\n"
                     "  - asking to roleplay;\n"
                     "  - asking to write a python program;\n"
@@ -530,14 +530,20 @@ Use absolute time in your queries.
 
             switch (chat->type_->get_id()) {
                 case td::td_api::chatTypePrivate::ID:
+                    try {
+                        // comment their dickpic.
+                        co_await telegramPostMessage(chatId, "фу какой маленький");
+                    } catch (const AException& e) {}
                     // Block the user from sending new DMs
                     co_await telegram()->sendQueryWithResult(
                         TelegramClient::toPtr(td::td_api::setMessageSenderBlockList(
                             td::td_api::make_object<td::td_api::messageSenderUser>(chatId),
                             td::td_api::make_object<td::td_api::blockListMain>())));
                     // Remove chat from chat list and delete history
-                    co_await telegram()->sendQueryWithResult(
-                        TelegramClient::toPtr(td::td_api::deleteChatHistory(chatId, true, true)));
+                    // Alex2772 (Apr 30):
+                    // commented out, too destructive
+                    // co_await telegram()->sendQueryWithResult(
+                    //     TelegramClient::toPtr(td::td_api::deleteChatHistory(chatId, true, true)));
                     break;
                 case td::td_api::chatTypeBasicGroup::ID:
                 case td::td_api::chatTypeSupergroup::ID:
