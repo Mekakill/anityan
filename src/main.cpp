@@ -152,41 +152,44 @@ namespace {
                     },
                 });
             }
-            actions.insert({
-                .name = "record_audio",
-                .description = "Records a new voice message using ElevenLabs TTS and stores it in Kuni's voice gallery.",
-                .parameters = {
-                    .properties = {
-                        {"audio_desc", {
-                            .type = "string",
-                            .description = "Specifies the message Kuni would like to say. This is a TTS prompt, so the text will be converted directly into speech. Do NOT include instructions for the voice message in this field. Instead, write EXACTLY what you would say in a #send_telegram_message call. The description only has to include what the user will hear in the final voice message."_format()},
+            if constexpr (config::CAPABILITY_RECORD_AUDIO) {
+                actions.insert({
+                    .name = "record_audio",
+                    .description = "Records a new voice message and stores it in Yuki's voice gallery. This is useful for expressing emotions in a more direct way."
+                                    "The result of this tool is a filename. The filename can then be sent to someone else using #send_telegram_message.",
+                    .parameters = {
+                        .properties = {
+                            {"audio_desc", {
+                                .type = "string",
+                                .description = "Specifies the message Yuki would like to say. This is a TTS prompt, so the text will be converted directly into speech. Do NOT include instructions for the voice message in this field. Instead, write EXACTLY what you would say in a #send_telegram_message call. The description only has to include what the user will hear in the final voice message."_format()},
+                            },
                         },
+                        .required = {"audio_desc"},
                     },
-                    .required = {"audio_desc"},
-                },
-                .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
-                    auto audioDesc = ctx.args["audio_desc"].asStringOpt().valueOrException("audio_desc is required");
-                    if (audioDesc.trim().empty()) {
-                        throw AException("audio_desc must not be empty");
-                    }
+                    .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
+                        auto audioDesc = ctx.args["audio_desc"].asStringOpt().valueOrException("audio_desc is required");
+                        if (audioDesc.trim().empty()) {
+                            throw AException("audio_desc must not be empty");
+                        }
 
-                    // really dirty fix: hit Kuni with an exception if it tries to say an introduction in a voice note
-                    if (audioDesc.contains("Kuni says") || audioDesc.contains("voice") || audioDesc.contains("tone")
-                        || audioDesc.contains("Kuni говорит") || audioDesc.contains("голосом") || audioDesc.contains("тоном")) {
-                        throw AException("Skip introductions in voice message. Instead, send the message content directly. For example, if you want to say \"Kuni says hello in a playful tone\" in a voice message, just send \"hello\".");
-                    }
+                        // really dirty fix: hit Yuki with an exception if it tries to say an introduction in a voice note
+                        if (audioDesc.contains("voice") || audioDesc.contains("tone") || audioDesc.contains("Yuki") 
+                            || audioDesc.contains("голосом") || audioDesc.contains("тоном")) {
+                            throw AException("Skip introductions in voice message. Instead, send the message content directly. For example, if you want to say \"Yuki says hello in a playful tone\" in a voice message, just send \"hello\".");
+                        }
 
-                    auto ttsApiKey = util::secrets()["elevenlabs"]["api_key"].as_string();
-                    AString voiceId = "pPdl9cQBQq4p6mRkZy2Z";
-                    if (util::secrets()["elevenlabs"].contains("voice_id")) {
-                        voiceId = util::secrets()["elevenlabs"]["voice_id"].as_string();
-                    }
-                    VoiceGenerator generator(ttsApiKey, voiceId);
-                    auto voiceMessage = co_await generator.generate(audioDesc, "ru", 1.2);
+                        auto ttsApiKey = util::secrets()["elevenlabs"]["api_key"].as_string();
+                        AString voiceId = "pPdl9cQBQq4p6mRkZy2Z";
+                        if (util::secrets()["elevenlabs"].contains("voice_id")) {
+                            voiceId = util::secrets()["elevenlabs"]["voice_id"].as_string();
+                        }
+                        VoiceGenerator generator(ttsApiKey, voiceId);
+                        auto voiceMessage = co_await generator.generate(audioDesc, "ru", 1.2);
 
-                    co_return "Filename: {}"_format(voiceMessage.path.filename());
-                },
-            });
+                        co_return "Filename: {}"_format(voiceMessage.path.filename());
+                    },
+                });
+            }
             actions.insert({
                 .name = "get_telegram_chats",
                 .description = "Returns a list of Telegram chats. Use this to seek chat_ids, looking for existing "
@@ -284,15 +287,24 @@ Use absolute time in your queries.
                     if (query.startsWith("@")) {
                         query = query.substr(1);
                     }
-                    auto queryResult = co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(td::td_api::searchChatsOnServer(query, 50)));
 
-                    if (queryResult->chat_ids_.empty()) {
+                    auto queryResult = co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(td::td_api::searchChatsOnServer(query, 50)));
+                    auto usernameQueryResult = co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(td::td_api::searchPublicChat(query)));
+
+                    if (queryResult->chat_ids_.empty() && !usernameQueryResult->id_) {
                         co_return "No chats found satisfying your query.";
                     }
 
                     AString result;
                     auto chats = co_await chatIdsToChats(queryResult->chat_ids_);
+                    auto publicChat = co_await chatIdToChat(usernameQueryResult->id_);
+
+                    result += "<existing_chats comment=\"Chats that you participate already\">\n";
                     co_await llmuiFormatChatList(result, chats);
+                    result += "</existing_chats>\n";
+                    result += "<global_search comment=\"Chats that don't know about you\">\n";
+                    co_await llmuiFormatChatSingle(result, std::move(publicChat), query);
+                    result += "</global_search>\n";
 
                     co_return result;
                 },
@@ -379,6 +391,41 @@ Use absolute time in your queries.
             }
         }
 
+        [[nodiscard]]
+        AFuture<> llmuiFormatChatSingle(AString& result, td::td_api::object_ptr<td::td_api::chat> chat, AString username = "") {
+            // Skip non-PAPIK chats in lockdown mode
+            if constexpr (config::LOCKDOWN_MODE) {
+                if (chat->id_ != config::PAPIK_CHAT_ID) {
+                    co_return;
+                }
+            }
+
+            auto type = [&]() -> AStringView {
+                switch (chat->type_->get_id()) {
+                    case td::td_api::chatTypePrivate::ID: return "direct messages";
+                    case td::td_api::chatTypeBasicGroup::ID: return "group chat";
+                    case td::td_api::chatTypeSupergroup::ID: return "channel";
+                    default: return "unknown";
+                }
+            }();
+            AString preview;
+            if (chat->last_message_) {
+                preview = co_await extractSenderName(*chat->last_message_);
+                preview += ": ";
+                preview += extractMessageTypeAndText(*chat->last_message_);
+                preview.replaceAll("\n", " ");
+
+                if (preview.length() > 80) {
+                    preview = preview.substr(0, 30) + "..." + preview.substr(preview.length() - 30);
+                }
+            }
+            result += "<chat chat_id=\"{}\" username=\"{}\" title=\"{}\" preview=\"{}\" type=\"{}\""_format(chat->id_, username, chat->title_, preview, type);
+            if (chat->unread_count_ > 0) {
+                result += " unread_count=\"{}\""_format(chat->unread_count_);
+            }
+            result += " />\n";
+        }
+
         AFuture<AVector<td::td_api::object_ptr<td::td_api::chat>>> chatIdsToChats(std::span<td::td_api::int53> ids) {
             auto chats =
                 ids | ranges::view::transform([&](td::td_api::int53 chatId) {
@@ -391,6 +438,10 @@ Use absolute time in your queries.
                 result.push_back(co_await chat);
             }
             co_return result;
+        }
+
+        AFuture<td::td_api::object_ptr<td::td_api::chat>> chatIdToChat(td::td_api::int53 id) {
+            co_return co_await telegram()->sendQueryWithResult(TelegramClient::toPtr(td::td_api::getChat(id)));;
         }
 
         AFuture<AVector<td::td_api::object_ptr<td::td_api::chat>>> getChats() {
@@ -920,9 +971,13 @@ Use absolute time in your queries.
             ALOG_DEBUG(LOG_TAG) << "Loaded " << messages.size() << " message(s): " << chat->title_;
             if (messages.empty()) {
                 // Kuni sometimes opens random chats?
-                throw AException("Failed to open chat");
+                // throw AException("Failed to open chat");
 
-                // result += "This chat is empty. Start a new conversation!"; // just like in real tg client
+                if constexpr (config::SHOULD_BEGIN_DIALOGS) {
+                    result += "This chat is empty! Only proceed if you looked up a @username and it led you here.\n";
+                    result += "Only write what you have to say to the chat; if someone asked you to text this person, just text them.\n";
+                    result += "If you try to get back to the original chat and type something, you will be sending an extra message to the wrong chat.";
+                }
                 // goto naxyi;
             }
             {
