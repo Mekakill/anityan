@@ -135,7 +135,7 @@ namespace {
                                                         "take_photo only knows about Kuni.\n"
                                                         "To draw other character, specify their name, and describe their\n"
                                                         "appearance as specifically as possible."
-                                                        "Example: \"Selfie of Yuki - Kuni's sister: anime young female,"
+                                                        "Example: \"Selfie of Kuni - Kuni's sister: anime young female,"
                                                         "gold eyes, white hair, white dress, black socks.\"\n"
                                         ,}},
                                 },
@@ -155,13 +155,13 @@ namespace {
             if constexpr (config::CAPABILITY_RECORD_AUDIO) {
                 actions.insert({
                     .name = "record_audio",
-                    .description = "Records a new voice message and stores it in Yuki's voice gallery. This is useful for expressing emotions in a more direct way."
+                    .description = "Records a new voice message and stores it in Kuni's voice gallery. This is useful for expressing emotions in a more direct way."
                                     "The result of this tool is a filename. The filename can then be sent to someone else using #send_telegram_message.",
                     .parameters = {
                         .properties = {
                             {"audio_desc", {
                                 .type = "string",
-                                .description = "Specifies the message Yuki would like to say. This is a TTS prompt, so the text will be converted directly into speech. Do NOT include instructions for the voice message in this field. Instead, write EXACTLY what you would say in a #send_telegram_message call. The description only has to include what the user will hear in the final voice message."_format()},
+                                .description = "Specifies the message Kuni would like to say. This is a TTS prompt, so the text will be converted directly into speech. Do NOT include instructions for the voice message in this field. Instead, write EXACTLY what you would say in a #send_telegram_message call. The description only has to include what the user will hear in the final voice message."_format()},
                             },
                         },
                         .required = {"audio_desc"},
@@ -172,10 +172,10 @@ namespace {
                             throw AException("audio_desc must not be empty");
                         }
 
-                        // really dirty fix: hit Yuki with an exception if it tries to say an introduction in a voice note
-                        if (audioDesc.contains("voice") || audioDesc.contains("tone") || audioDesc.contains("Yuki") 
+                        // really dirty fix: hit Kuni with an exception if it tries to say an introduction in a voice note
+                        if (audioDesc.contains("voice") || audioDesc.contains("tone") || audioDesc.contains("Kuni")
                             || audioDesc.contains("голосом") || audioDesc.contains("тоном")) {
-                            throw AException("Skip introductions in voice message. Instead, send the message content directly. For example, if you want to say \"Yuki says hello in a playful tone\" in a voice message, just send \"hello\".");
+                            throw AException("Skip introductions in voice message. Instead, send the message content directly. For example, if you want to say \"Kuni says hello in a playful tone\" in a voice message, just send \"hello\".");
                         }
 
                         auto ttsApiKey = util::secrets()["elevenlabs"]["api_key"].as_string();
