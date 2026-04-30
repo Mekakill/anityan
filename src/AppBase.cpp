@@ -434,17 +434,17 @@ Act proactively!
 void AppBase::updateTools(OpenAITools& actions) {
     actions.insert({
         .name = "ask_diary",
-        .description = "Consult with Kuni's main knowledge database (subagent). Use this to retrieve additional pages from diary. USE THIS PROACTIVELY.",
+        .description = "Consult with Kuni's main knowledge database (subagent). Use this to retrieve additional pages from diary. USE THIS PROACTIVELY — especially when someone shares personal news, asks about past events, or mentions people/activities you might know about.\n\nExamples of when to call:\n- User says \"I wrote a song today\" → query: \"[sender name] said they wrote a song today. What do I know about them and songs? Do they participate in a band? Which songs do they write? What music do they listen to?\"\n- User asks \"what songs am I writing?\" → query: \"What songs does [sender name] write? What do I know about their musical activities?\"\n- User says \"I'm going to the gym\" → query: \"Does [sender name] go to the gym? Any related habits or routines?\"",
         .parameters = {
             .properties =
                 {
-                    {"query", {.type = "string", .description = "Freeform question to diary. Provide as much context as possible."}},
+                    {"query", {.type = "string", .description = "Freeform question to diary. Provide as much context as possible — include sender name, topic, and what you want to know."}},
                 },
             .required = {"query"},
         },
         .handler = [this](OpenAITools::Ctx ctx) -> AFuture<AString> {
             auto query = ctx.args["query"].asStringOpt().valueOrException("\"query\" string is required");
-            if (query.length() < 60) {
+            if (query.length() < 40) {
                 // Alex2772 16-04-2026:
                 // changed from throw AException to co_return.
                 // AException is a technical error and the engine would load additional diary entries
