@@ -10,6 +10,7 @@ namespace config {
     static constexpr bool SHOULD_BEGIN_DIALOGS = true;
 
     static constexpr bool RANDOMLY_GO_SLEEP = true;
+    static constexpr bool DEEP_CHATLIST_QUERY = false;
     static constexpr bool DEEP_DIALOG_QUERY = false;
 
     static constexpr auto SYSTEM_PROMPT = R"(
