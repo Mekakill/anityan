@@ -43,7 +43,8 @@ namespace {
 
     class App : public AppBase {
     public:
-        App(): AppBase("data") {
+        App(_<TelegramClient> telegram): AppBase("data"), mTelegram(std::move(telegram)) {
+            ALOG_TRACE(LOG_TAG) << "App::App";
             mTelegram->onEvent = [this](td::td_api::object_ptr<td::td_api::Object> event) {
                 td::td_api::downcast_call(*event,
                                           [this](auto& u) { mAsync << this->handleTelegramEvent(std::move(u)); });
@@ -55,6 +56,7 @@ namespace {
 
     protected:
         AFuture<> telegramPostMessage(int64_t chatId, AString text, AOptional<_<AImage>> photo = std::nullopt, AOptional<APath> audioPath = std::nullopt, int64_t replyTo = 0) {
+            ALOG_TRACE(LOG_TAG) << "telegramPostMessage: chat_id" << chatId << " text=" << text << " photo=" << photo << " audioPath=" << audioPath << " replyTo=" << replyTo;
             // Check lockdown mode - only allow PAPIK_CHAT_ID if lockdown is enabled
             if constexpr (config::LOCKDOWN_MODE) {
                 if (chatId != config::PAPIK_CHAT_ID) {
@@ -354,7 +356,7 @@ Use absolute time in your queries.
         }
 
     private:
-        _<TelegramClient> mTelegram = _new<TelegramClient>();
+        _<TelegramClient> mTelegram;
 
         [[nodiscard]]
         AFuture<> llmuiFormatChatList(AString& result, std::span<td::td_api::object_ptr<td::td_api::chat>> chats) {
@@ -1433,29 +1435,35 @@ AUI_ENTRY {
     }
 
     using namespace std::chrono_literals;
-    auto app = _new<App>();
-
-    _new<AThread>([] {
-        std::cin.get();
-        gEventLoop.stop();
-    })->start();
+    auto telegram = _new<TelegramClient>();
 
     AAsyncHolder async;
-    async << [](_<App> app) -> AFuture<> {
+    async << [](_<TelegramClient> telegram) -> AFuture<> {
         ALogger::info(LOG_TAG) << "Waiting for Telegram network...";
-        co_await app->telegram()->waitForConnection();
+        co_await telegram->waitForConnection();
         ALogger::info(LOG_TAG) << "Connected to Telegram";
-
         // app->actProactively(); // for tests
-    }(app);
+    }(telegram);
+
+    _<App> app;
+    AObject::connect(telegram->loggedIn, telegram, [&] {
+        app = _new<App>(telegram);
+        _new<AThread>([] {
+            ALogger::info(LOG_TAG) << "Bot is up and running. Press enter to shutdown gracefully.";
+            std::cin.get();
+            ALogger::info(LOG_TAG) << "Bot is shutting down. Please give some time to dump remaining context";
+            gEventLoop.stop();
+        })->start();
+    });
 
     IEventLoop::Handle h(&gEventLoop);
     gEventLoop.loop();
 
-    ALogger::info(LOG_TAG) << "Bot is shutting down. Please give some time to dump remaining context";
-    auto d = app->diaryDumpMessages();
-    while (!d.hasResult()) {
-        AThread::processMessages();
+    if (app) {
+        auto d = app->diaryDumpMessages();
+        while (!d.hasResult()) {
+            AThread::processMessages();
+        }
     }
 
     return 0;
