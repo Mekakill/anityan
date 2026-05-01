@@ -158,19 +158,6 @@ docker compose up -d
 # - Stable Diffusion WebUI on port 7860
 ```
 
-### 3. Create Secrets File
-Create `build/secrets/secrets.h` with:
-```cpp
-#pragma once
-
-namespace secrets {
-static constexpr auto TELEGRAM_API_ID = 123456;     // tdlib API key, see
-static constexpr auto TELEGRAM_API_HASH = "abcdef"; // https://core.telegram.org/api/obtaining_api_id
-static constexpr auto DEEPSEEK_BEARER_KEY = "";     // specify this if you want to use deepseek cloud
-static constexpr auto OLLAMA_BEARER_KEY = "";       // specify this if you want ask_google capability
-}
-```
-
 ### Build Steps
 
 ```bash
@@ -208,6 +195,11 @@ In my deployment, I use local vision models to process visual information. (24GB
 You will need a server or an always-on PC to host Kuni instance (hosting your own catgirl is an expensive hobby).
 
 You can tinker with my setup by adjusting `docker-compose.yml`, `ollama_setup.sh` and `src/config.h`.
+
+
+### 4. Adjust Secrets File
+
+Update `data/secrets.toml` and restart the program.
 
 ## Run Instructions
 
