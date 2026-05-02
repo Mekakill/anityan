@@ -6,7 +6,7 @@ import asyncio
 import base64
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-
+import os
 
 # ============================================================================
 # CONFIGURATION (как config.h в C++)

@@ -1,4 +1,4 @@
-import toml
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -35,4 +35,4 @@ hash = ""
         raise FileNotFoundError(f"Please create {secrets_path} with your API keys")
     
     with open(secrets_path, 'r') as f:
-        return toml.load(f)
+        return tomllib.load(f)

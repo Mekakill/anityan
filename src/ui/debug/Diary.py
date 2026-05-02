@@ -59,10 +59,12 @@ class Diary:
         view.add_tab(de, "Embedding search")
         view.add_tab(dq, "queryAI")
         
-        return view
+        return view()
 
 
 if __name__ == "__main__":
     # Пример использования
     diary = Diary.create()
     print(f"Создано {diary.tab_count} вкладок: {diary.tab_names}")
+
+

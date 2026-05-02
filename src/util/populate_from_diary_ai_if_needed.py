@@ -7,7 +7,7 @@ import asyncio
 from typing import List, Dict, Any, Optional, AsyncIterator
 from dataclasses import dataclass, field
 import re
-
+import time
 
 # ============================================================================
 # БАЗОВАЯ СТРУКТУРА DATA MODELS (как OpenAIChat::Message и Diary в C++)

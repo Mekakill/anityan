@@ -60,7 +60,8 @@ class DiaryEmbeddingState:
             # Фильтрация записей (как в оригинале)
             filtered_diary = [
                 entry for entry in self.diary 
-                if entry.has_important_note is False
+                # if entry.has_important_note is False
+                if not getattr(entry, 'has_important_note', False)
             ]
             
             # Имитация генерации вектора эмбеддинга
@@ -269,8 +270,11 @@ class EntriesGroupBox:
         lines.append(f"\n[Journal Entries] {journal_count} total")
         
         for entry in self.state.diary[:5]:  # Ограничим вывод для примера
-            row = EntryRowWidget(entry)
-            lines.append(row.render())
+            if getattr(entry, 'relatedness', None) is not None:
+                row = EntryRowWidget(entry)
+                lines.append(row.render())            
+            # row = EntryRowWidget(entry)
+            # lines.append(row.render())
         
         if found_count > 0:
             lines.extend([
@@ -402,3 +406,5 @@ if __name__ == "__main__":
         diary.set_query(query)
         print(diary.render())
         print()
+
+
