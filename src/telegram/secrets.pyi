@@ -1,5 +1,5 @@
-# src/util/secrets.py
-"""Модуль для работы с секретами и конфигурацией."""
+
+# """Модуль для работы с секретами и конфигурацией."""
 
 import tomllib  # Python 3.11+
 from pathlib import Path

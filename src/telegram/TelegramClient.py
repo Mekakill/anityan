@@ -360,13 +360,20 @@ from typing import Callable, Optional
 # from TelegramClient import TelegramClient
 # import TelegramClient
 # import TelegramClient
-from telegram.TelegramClient import TelegramClient
+# from telegram.TelegramClient import TelegramClient
 # from util.secrets import get_secrets
 # from util.secrets import secrets
 # import secrets 
 # from secrets import
 # import src.util.secrets
-from telegram.
+# from telegram.secrets import
+# from telegram import TelegramClient, secrets
+# import telegram.TelegramClient as TelegramClient
+from .import TelegramClient
+from .import secrets
+# from .import secrets
+# from .secrets import 
+# import telegram.secrets
 # from telegram.secrets import secrets
 # from telegram.secrets import secrets as s
 # from src.util import secrets as s
