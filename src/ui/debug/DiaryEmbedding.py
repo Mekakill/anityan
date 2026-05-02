@@ -1,6 +1,3 @@
-#
-# Created by alex2772 on 3/14/26.
-#
 
 from typing import Optional, Dict, List, Any
 from dataclasses import dataclass, field
