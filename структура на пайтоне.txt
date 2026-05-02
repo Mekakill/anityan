@@ -1,0 +1,56 @@
+# Структура проекта:
+my_project/
+├── .github/
+│   └── workflows/
+│       ├── build.yml
+│   └── tidy-summary.py
+├── assets/
+│   └── img/
+│       └── icon.svg
+├── src/
+│   ├── telegram/
+│   │   ├── TelegramClient.py
+│   │   └── __init__.py
+│   ├── ui/
+│   │   └── debug/
+│   │       ├── Diary.py
+│   │       ├── DiaryEmbedding.py
+│   │       ├── DiaryQueryAI.py
+│   │       ├── KuniDebugWindow.py
+│   │       └── __init__.py
+│   ├── util/
+│   │   ├── cosine_similarity.py
+│   │   ├── important_things_to_remember.py
+│   │   ├── populate_from_diary_ai_if_needed.py
+│   │   └── secrets.py
+│   ├── AppBase.py
+│   ├── config.py
+│   ├── Diary.py
+│   ├── ElevenLabsClient.py
+│   ├── Endpoint.py
+│   ├── ImageGenerator.py
+│   ├── KuniCharacter.py
+│   ├── main.py
+│   ├── OpenAIChat.py
+│   ├── OpenAITools.py
+│   ├── StableDiffusionClient.py
+│   ├── VoiceGenerator.py
+│   └── WebSearch.py
+├── tests/
+│   ├── data/
+│   │   └── random_diary_entries/
+│   ├── common.py
+│   ├── DairyIntegrationTest.py
+│   ├── ImageGeneratorIntegrationTest.py
+│   ├── OpenAIChatIntegrationTest.py
+│   ├── OpenAIChatTest.py
+│   ├── StableDiffusionClientIntegrationTest.py
+│   ├── TelegramIntegrationTests.py
+│   └── WebSearchIntegrationTest.py
+├── .gitignore
+├── pyproject.toml
+├── requirements.txt
+├── docker-compose.yml
+├── ollama_setup.sh
+├── README.md
+└── setup.py

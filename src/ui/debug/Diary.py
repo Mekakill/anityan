@@ -1,33 +1,67 @@
-# src/ui/debug/Diary.py
+#
+# Created by alex2772 on 4/10/26.
+#
 
-from DiaryEmbedding import DiaryEmbedding
-from DiaryQueryAI import DiaryQueryAI
-
-
-def Diary():
-    """Функция, возвращающая экземпляр TabView с вкладками"""
-    tabs = TabView()
-    tabs.add_tab(DiaryEmbedding(), "Embedding search")
-    tabs.add_tab(DiaryQueryAI(), "queryAI")
-    return tabs
-
-
-class TabView:
-    """Базовый класс вкладки (аналог AUI::ATabView)"""
-    
+class DiaryView:
     def __init__(self):
-        self.tabs = []
+        self.tabs = {}
+        self.tab_names = []
     
-    def add_tab(self, widget, title):
-        """Добавляет вкладку с виджетом и заголовком"""
-        self.tabs.append({"widget": widget, "title": title})
+    def add_tab(self, widget, name):
+        """Добавить вкладку с виджетом."""
+        self.tabs[name] = widget
+        self.tab_names.append(name)
+        return True
+    
+    def __call__(self):
+        """Создать и вернуть структуру вкладок."""
+        tabs_container = TabContainer(self.tabs, self.tab_names)
+        return tabs_container
 
 
-class DiaryEmbedding:
-    """Виджет для поиска эмбеддингов (аналог DiaryEmbedding{})"""
-    pass
+class TabContainer:
+    """Контейнер для вкладок UI."""
+    
+    def __init__(self, widgets, tab_names):
+        self.widgets = widgets
+        self.tab_names = tab_names
+    
+    @property
+    def tab_count(self):
+        """Количество вкладок."""
+        return len(self.tab_names)
+    
+    def get_tab_widget(self, index):
+        """Получить виджет по индексу вкладки."""
+        if 0 <= index < self.tab_count:
+            name = self.tab_names[index]
+            return self.widgets.get(name)
+        return None
+    
+    def get_all_widgets(self):
+        """Получить все виджеты во вкладках."""
+        return list(self.widgets.values())
 
 
-class DiaryQueryAI:
-    """Виджет для запросов к AI (аналог DiaryQueryAI{})"""
-    pass
+# Простые заглушки для вложенных классов (как DiaryEmbedding и DiaryQueryAI)
+class Diary:
+    @staticmethod
+    def create():
+        """Создать экземпляр DiaryView."""
+        view = DiaryView()
+        from ui.debug.DiaryEmbedding import DiaryEmbedding as DE
+        from ui.debug.DiaryQueryAI import DiaryQueryAI as DQ
+        
+        de = DE()
+        dq = DQ()
+        
+        view.add_tab(de, "Embedding search")
+        view.add_tab(dq, "queryAI")
+        
+        return view
+
+
+if __name__ == "__main__":
+    # Пример использования
+    diary = Diary.create()
+    print(f"Создано {diary.tab_count} вкладок: {diary.tab_names}")

@@ -1,0 +1,76 @@
+есть проект на с++ с такой вот структурой: 
+my_project/
+├── .github/
+│   └──worklows/
+│       ├──build.yml
+│   ├── tidy-summary.py
+├── assets/
+│   └──img/
+│       ├──icon.svg
+├── src/
+│   └── telegram/
+│       ├──TelegramClient.cpp содержит #include "TelegramClient.h" #include "util/secrets.h" а также использует кастомную AUI #include "AUI/Common/ATimer.h" #include "AUI/Util/kAUI.h"
+│       ├── TelegramClient.h содержит #include "AUI/Common/AObject.h" #include <td/telegram/Client.h> #include <td/telegram/td_api.h> #include <td/telegram/td_api.hpp> #include "AUI/Common/AMap.h" #include "AUI/Common/ASignal.h" #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AFuture.h"
+│   └── ui/
+│       └── debug/
+│           ├── Diary.cpp содержит #include "Diary.h" #include "DiaryEmbedding.h" #include "DiaryQueryAI.h" #include "AUI/View/ATabView.h"
+│           ├── Diary.h содержит #include <AUI/View/AView.h>
+│           ├── DiaryEmbedding.cpp содержит #include "DiaryEmbedding.h" #include "Diary.h" #include <Diary.h> #include <range/v3/view/enumerate.hpp> #include <range/v3/view/iota.hpp> #include "AUI/Util/AImageDrawable.h" #include "AUI/Util/UIBuildingHelpers.h" #include "AUI/View/ADrawableView.h" #include "AUI/View/AForEachUI.h" #include "AUI/View/AGroupBox.h" #include "AUI/View/AScrollArea.h" #include "AUI/View/ASpinnerV2.h" #include "AUI/View/ATabView.h" #include "AUI/View/AText.h" #include "AUI/View/ATextArea.h"
+│           ├── DiaryEmbedding.h содержит #include <AUI/View/AView.h>
+│           ├── DiaryQueryAI.cpp содержит #include <range/v3/view/transform.hpp> #include <AUI/ASS/ASS.h> #include <AUI/Thread/AAsyncHolder.h> #include <AUI/Util/UIBuildingHelpers.h> #include <AUI/View/AButton.h> #include <AUI/View/AForEachUI.h> #include <AUI/View/AScrollArea.h> #include <AUI/View/ASpacerFixed.h> #include <AUI/View/ASpinnerV2.h> #include <AUI/View/AText.h> #include <AUI/View/ATextField.h> #include <AUI/View/Dynamic.h> #include "DiaryQueryAI.h" #include <Diary.h> #include <OpenAIChat.h> #include <OpenAITools.h>
+│           ├── DiaryQueryAI.h содержит #include <AUI/View/AView.h>
+│           ├── KuniDebugWindow.cpp содержит #include "KuniDebugWindow.h" #include "AUI/Util/Declarative/Containers.h" #include "AUI/View/ATabView.h" #include "Diary.h"
+│           ├── KuniDebugWindow.h содержит #include "AUI/Platform/AWindow.h"
+│   └── util/
+│       ├── cosine_similarity.h содержит #include <valarray> #include <AUI/Common/AException.h>
+│       ├── important_things_to_remember.h содержит #include "populate_from_diary_ai_if_needed.h" #include <AppBase.h> #include <OpenAIChat.h>
+│       ├── populate_from_diary_ai_if_needed.cpp содержит #include <chrono> #include "populate_from_diary_ai_if_needed.h" #include <range/v3/algorithm/any_of.hpp>
+│       ├── populate_from_diary_ai_if_needed.h содержит #include "Diary.h" #include "OpenAIChat.h" #include <AUI/Common/AStringView.h> #include <AUI/Thread/AFuture.h>
+│       ├── secrets.cpp содержит #include "secrets.h" #include "AUI/IO/APath.h" #include "AUI/Logging/ALogger.h" #include <toml.hpp>
+│       ├── secrets.h содержит #include <toml11/types.hpp>
+│   ├── AppBase.cpp содержит #include "AppBase.h" #include <random> #include <range/v3/algorithm/any_of.hpp> #include <range/v3/algorithm/remove_if.hpp> #include <range/v3/algorithm/sort.hpp> #include <range/v3/range/conversion.hpp> #include <range/v3/view/take.hpp> #include <range/v3/view/take_last.hpp> #include <range/v3/view/transform.hpp> #include "AUI/Logging/ALogger.h" #include "AUI/Thread/AEventLoop.h" #include "AUI/Thread/AThreadPool.h" #include "AUI/Util/kAUI.h" #include "OpenAIChat.h" #include "config.h" #include "KuniCharacter.h" #include "WebSearch.h" #include "AUI/IO/AFileInputStream.h" #include "util/cosine_similarity.h" #include "util/important_things_to_remember.h" #include <range/v3/action/erase.hpp>
+│   ├── AppBase.h содержит #include "AUI/Common/AObject.h" #include "AUI/Common/ATimer.h" #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include "Diary.h" #include "OpenAITools.h"
+│   ├── config.h содержит #include <chrono> #include "Endpoint.h"
+│   ├── Diary.cpp содержит #include "Diary.h" #include <random> #include <range/v3/action/sort.hpp> #include "AUI/IO/AFileInputStream.h" #include "AUI/IO/AFileOutputStream.h" #include "AUI/Logging/ALogger.h" #include "AUI/Thread/AThreadPool.h" #include "AUI/Util/kAUI.h" #include "OpenAIChat.h" #include "util/cosine_similarity.h" #include <range/v3/algorithm/sort.hpp> #include <range/v3/range/conversion.hpp> #include <range/v3/view/enumerate.hpp> #include <range/v3/view/transform.hpp> #include "OpenAITools.h"
+│   ├── Diary.h содержит #include "AUI/Common/AObject.h" #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include "AUI/Util/kAUI.h" #include "OpenAIChat.h" #include "util/cosine_similarity.h" #include <chrono> #include <filesystem> #include <list> #include <string> #include <valarray> #include <vector>
+│   ├── ElevenLabsClient.cpp содержит #include "ElevenLabsClient.h" #include "AUI/Curl/ACurl.h" #include "AUI/Json/Conversion.h" #include "AUI/Logging/ALogger.h" #include "config.h"
+│   ├── ElevenLabsClient.h содержит #include "config.h" #include "AUI/Common/AString.h" #include "AUI/Common/AVector.h" #include "AUI/Common/AByteBuffer.h" #include "AUI/Thread/AFuture.h" #include "Endpoint.h"
+│   ├── Endpoint.h содержит #include "AUI/Common/AString.h"
+│   ├── ImageGenerator.cpp содержит #include "ImageGenerator.h" #include <random> #include <range/v3/algorithm/count_if.hpp> #include "KuniCharacter.h" #include "AUI/Logging/ALogger.h" #include "AUI/Util/kAUI.h" #include <range/v3/view/transform.hpp> #include <range/v3/range/conversion.hpp> #include <range/v3/view/filter.hpp> #include <range/v3/view/reverse.hpp> #include "OpenAIChat.h" #include "AUI/Image/png/PngImageLoader.h" #include "AUI/IO/AFileInputStream.h"
+│   ├── ImageGenerator.h содержит #include "AUI/Common/AString.h"#include "AUI/Thread/AFuture.h" #include "AUI/Image/AImage.h" #include "StableDiffusionClient.h" #include "OpenAIChat.h"
+│   ├── KuniCharacter.cpp содержит #include "KuniCharacter.h" #include "AUI/Logging/ALogger.h" #include "AUI/Common/AByteBuffer.h" #include "AUI/IO/AFileInputStream.h" #include "AUI/IO/AFileOutputStream.h"
+│   ├── KuniCharacter.h содержит #include "AUI/Common/AString.h"
+│   ├── main.cpp содержит #include <random> #include <range/v3/action/insert.hpp> #include <range/v3/algorithm/any_of.hpp> #include <range/v3/algorithm/max_element.hpp> #include <range/v3/algorithm/min_element.hpp> #include <range/v3/numeric/accumulate.hpp> #include <range/v3/range/conversion.hpp> #include <range/v3/view/reverse.hpp> #include <range/v3/view/transform.hpp> #include <simdutf/encoding_types.h> #include "AUI/Common/AByteBuffer.h" #include "AUI/IO/AFileInputStream.h" #include "AUI/IO/APath.h" #include "AUI/Platform/Entry.h" #include "AUI/Util/ASharedRaiiHelper.h" #include "AUI/Util/kAUI.h" #include "AppBase.h" #include "ImageGenerator.h"#include "VoiceGenerator.h" #include "AUI/Image/jpg/JpgImageLoader.h" #include "telegram/TelegramClient.h" #include "ui/debug/KuniDebugWindow.h" #include "util/populate_from_diary_ai_if_needed.h" #include "util/secrets.h" #include <range/v3/action/reverse.hpp> #include <range/v3/algorithm/contains.hpp> #include <range/v3/algorithm/remove_if.hpp> #include <range/v3/algorithm/sort.hpp>
+│   ├── OpenAIChat.cpp содержит #include "OpenAIChat.h" #include <chrono> #include <optional> #include <random> #include <range/v3/algorithm/generate.hpp> #include <range/v3/range/conversion.hpp> #include <range/v3/view.hpp> #include "AUI/Curl/ACurl.h" #include "AUI/IO/AFileOutputStream.h" #include "AUI/Image/jpg/JpgImageLoader.h" #include "AUI/Json/Conversion.h" #include "AUI/Logging/ALogger.h" #include "AUI/Reflect/AEnumerate.h" #include "AUI/Util/kAUI.h" #include "config.h" #include "AUI/IO/AByteBufferInputStream.h" #include "AUI/Util/ATokenizer.h"
+│   ├── OpenAIChat.h содержит #include <valarray> #include "AUI/Image/AImage.h" #include "AUI/Json/AJson.h" #include "AUI/Thread/AFuture.h" #include "AUI/Util/APreprocessor.h" #include "config.h" #include "AUI/Common/AProperty.h"
+│   ├── OpenAITools.cpp содержит #include "OpenAITools.h" #include <range/v3/range/conversion.hpp> #include <range/v3/view/transform.hpp>
+│   ├── OpenAITools.h содержит #include "AUI/Common/AString.h" #include "AUI/Common/AVector.h" #include "AUI/Json/AJson.h" #include "OpenAIChat.h"
+│   ├── StableDiffusionClient.cpp содержит #include "StableDiffusionClient.h" #include "AUI/Curl/ACurl.h" #include "AUI/Json/Conversion.h" #include "AUI/Logging/ALogger.h" #include <range/v3/view/transform.hpp> #include <range/v3/range/conversion.hpp> #include "config.h"
+│   ├── StableDiffusionClient.h содержит #include "config.h" #include "AUI/Common/AString.h" #include "AUI/Common/AVector.h" #include "AUI/Json/AJson.h" #include "AUI/Thread/AFuture.h" #include "AUI/Image/AImage.h" #include "Endpoint.h"
+│   ├── VoiceGenerator.cpp содержит #include "VoiceGenerator.h" #include "AUI/Logging/ALogger.h" #include "AUI/IO/AFileOutputStream.h" #include <chrono>
+│   ├── VoiceGenerator.h содержит #include "AUI/Common/AString.h" #include "AUI/Thread/AFuture.h" #include "AUI/IO/APath.h" #include "ElevenLabsClient.h"
+│   ├── WebSearch.cpp содержит #include "WebSearch.h" #include "OpenAITools.h" #include "AUI/Json/Conversion.h" #include "AUI/Curl/ACurl.h" #include "AUI/Logging/ALogger.h" #include "config.h" #include "util/secrets.h" #include <range/v3/view/transform.hpp>
+│   ├── WebSearch.h содержит #include "AUI/Common/AString.h" #include "AUI/Thread/AFuture.h"
+├── tests/
+│   └── data/
+│       └── random_diary_entries/
+│           ├── 1774016562.md
+│           ├── 1774016568.md
+│           ├── 1774016590.md
+│       ├──sb.jpg
+│   ├── common.h содержит #include "AUI/IO/APath.h" #include "AppBase.h" #include <gmock/gmock.h>
+│   ├── DairyIntegrationTest.cpp содержит #include <gmock/gmock.h> #include <range/v3/algorithm/any_of.hpp> #include "AppBase.h" #include "OpenAIChat.h" #include "AppBase.h" #include "common.h" #include "OpenAITools.h" #include "config.h"
+│   ├── ImageGeneratorIntegrationTest.cpp содержит #include "ImageGenerator.h" #include "common.h" #include <gmock/gmock.h> #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include "config.h" #include "AUI/Image/png/PngImageLoader.h"
+│   ├── OpenAIChatIntegrationTest.cpp содержит #include "OpenAIChat.h" #include <gmock/gmock.h> #include "common.h" #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include "OpenAITools.h" #include "config.h" #include "util/cosine_similarity.h"
+│   ├── OpenAIChatTest.cpp содержит #include "OpenAIChat.h" #include <gmock/gmock.h> #include "common.h" #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include "OpenAITools.h" #include "config.h" #include "util/cosine_similarity.h"
+│   ├── StableDiffusionClientIntegrationTest.cpp содержит #include "StableDiffusionClient.h" #include "common.h"  #include <gmock/gmock.h> #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include "config.h" #include "AUI/Image/png/PngImageLoader.h"
+│   ├── TelegramIntegrationTests.cpp содержит #include "config.h" #include <gmock/gmock.h> #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include "telegram/TelegramClient.h"
+│   ├── WebSearchIntegrationTest.cpp содержит #include <gtest/gtest.h> #include "WebSearch.h" #include "common.h" #include "config.h" #include "AUI/Thread/AAsyncHolder.h" #include "AUI/Thread/AEventLoop.h" #include <gmock/gmock-spec-builders.h>
+├── .clang-format
+├── .clang-tidy
+├── .gitignore
+├── CMakeLists.txt
+├── docker-compose.yml
+├── ollama_setup.sh
+├── README.md
+переделай эту структуру под Python
