@@ -7,7 +7,7 @@ import base64
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import os
-
+import json
 # ============================================================================
 # CONFIGURATION (как config.h в C++)
 # ============================================================================
