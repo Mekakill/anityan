@@ -366,8 +366,9 @@ from telegram.TelegramClient import TelegramClient
 # import secrets 
 # from secrets import
 # import src.util.secrets
-
-from telegram.secrets import secrets as s
+from telegram.
+# from telegram.secrets import secrets
+# from telegram.secrets import secrets as s
 # from src.util import secrets as s
 class AuthHandler(asyncio.Protocol):
     """Обработчик аутентификации для Telegram клиента"""
