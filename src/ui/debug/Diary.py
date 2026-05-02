@@ -49,9 +49,10 @@ class Diary:
     def create():
         """Создать экземпляр DiaryView."""
         view = DiaryView()
-        from ui.debug.DiaryEmbedding import DiaryEmbedding as DE
-        from ui.debug.DiaryQueryAI import DiaryQueryAI as DQ
-        
+        # from ui.debug.DiaryEmbedding import DiaryEmbedding as DE
+        # from ui.debug.DiaryQueryAI import DiaryQueryAI as DQ
+        from DiaryEmbedding import DiaryEmbedding as DE
+        from DiaryQueryAI import DiaryQueryAI as DQ        
         de = DE()
         dq = DQ()
         
