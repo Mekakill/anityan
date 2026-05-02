@@ -6,3 +6,4 @@ class KuniDebugWindow: public AWindow {
 public:
     KuniDebugWindow();
 };
+ 
