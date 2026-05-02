@@ -1,21 +1,33 @@
-name: Build
+# Этот файл содержит GitHub Actions workflow для построения и выпуска релизов приложения AUI
+name: Build #Объявление workflow
+# Имя этого файла работы (workflow)
 
 on:
   push:
     branches:
       - master
   pull_request:
+#Триггеры запуска:
+
+# При пуше на ветку master
+# При создании PR (pull request)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+# Оптимизация выполнения:
 
+# Если запуск workflows для текущей ветки/PR существует — отменяется предыдущий
+# pull_request.number — номер PR, github.ref — реф ветки (fallback)
+
+# Переменные окружения
 env:
-  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_SUBMODULE_STRATEGY: recursive #Git будет клонировать подмодули рекурсивно
 
 permissions:
-  contents: write
+  contents: write #Разрешение на запись контента (для создания релизов)
 
+#Job 1: build-desktop
 jobs:
   build-desktop:
     name: ${{ matrix.os }}
@@ -23,25 +35,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest] #Запуск на ОС, указанной в матрице (сейчас только Ubuntu)
+    # Сборка исходного кода    
     steps:
       - name: Fetch sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 #Клонирование репозитория с помощью GitHub Action v4
 
-      # Cache AUI boot directory
+      # Cache AUI boot directory  Кэширование зависимостей AUI.BOOT
       - name: Cache AUI.BOOT deps
         id: cache-aui-boot
         uses: actions/cache@v3
         env:
           cache-name: aui-boot
         with:
-          path: ~/.aui
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/CMakeLists.txt') }}
+          path: ~/.aui #Путь к .aui — директория с кэшируемыми зависимостями
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/CMakeLists.txt') }} #Key формируется из: ОС + имя кэша + хеш всех CMakeLists.txt (если изменили CMake → берём из кэша)
+          #Restore-keys — для частичного восстановления кэша при изменении части файлов
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-
+#Установка зависимостей по ОС
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: brew install cmake ninja
@@ -68,7 +82,7 @@ jobs:
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         run: choco install innosetup
-
+# Настройка компилятора
       - name: Setup Clang 22 (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -84,7 +98,7 @@ jobs:
           choco install llvm -y
           echo "CC=clang" >> $env:GITHUB_ENV
           echo "CXX=clang++" >> $env:GITHUB_ENV
-
+#Конфигурация CMake
       - name: Configure CMake
         run: cmake -G "Ninja" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ runner.os == 'Windows' && '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' || '' }} -DAUI_INSTALL_RUNTIME_DEPENDENCIES=TRUE
 

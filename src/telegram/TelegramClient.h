@@ -14,17 +14,17 @@
 class ATimer;
 class TelegramClient: public AObject{
 public:
-    struct StubHandler {
+    struct StubHandler {//используется в TelegramClient.cpp
         void operator()(auto& v) const { ALOG_TRACE("TelegramClient") << "Stub: " << to_string(v); }
     };
     TelegramClient();
 
     using Object = td::td_api::object_ptr<td::td_api::Object>;
 
-    AFuture<Object> sendQuery(td::td_api::object_ptr<td::td_api::Function> f);
+    AFuture<Object> sendQuery(td::td_api::object_ptr<td::td_api::Function> f);//используется в TelegramClient.cpp
 
     template<aui::derived_from<td::td_api::Function> F>
-    AFuture<td::td_api::object_ptr<typename F::ReturnType::element_type>> sendQueryWithResult(td::td_api::object_ptr<F> f) {
+    AFuture<td::td_api::object_ptr<typename F::ReturnType::element_type>> sendQueryWithResult(td::td_api::object_ptr<F> f) {//используется в TelegramClient.cpp
         auto object = co_await sendQuery(std::move(f));
         if (object->get_id() == td::td_api::error::ID) {
             auto error = td::move_tl_object_as<td::td_api::error>(std::move(object));
@@ -59,9 +59,9 @@ private:
     size_t mCurrentQueryId{};
     int64_t mMyId{};
 
-    void update();
-    void initClientManager();
+    void update();//используется в TelegramClient.cpp
+    void initClientManager();//используется в TelegramClient.cpp
 
-    void commonHandler(td::tl::unique_ptr<td::td_api::Object> object);
-    void processResponse(td::ClientManager::Response response);
+    void commonHandler(td::tl::unique_ptr<td::td_api::Object> object);//используется в TelegramClient.cpp
+    void processResponse(td::ClientManager::Response response);//используется в TelegramClient.cpp
 };

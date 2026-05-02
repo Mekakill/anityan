@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
-
+from OpenAIChat import Message, Role
 
 @dataclass
 class GalleryImage:

@@ -73,8 +73,8 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from collections import deque
-
-
+from OpenAIChat import Role, Message
+from Diary import EntryEx #возможно неправильный импорт
 @dataclass
 class Notification:
     """Notification to process"""

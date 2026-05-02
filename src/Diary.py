@@ -1,11 +1,11 @@
-import asyncio
+
 import json
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
 import numpy as np
-from aiohttp import ClientSession
-
+import datetime
+from util.cosine_similarity import cosine_similarity
 
 @dataclass
 class Entry:
