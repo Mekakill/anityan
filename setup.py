@@ -7,9 +7,9 @@ def read_requirements():
 
 
 setup(
-    name="kuni",
+    name="anityan",
     version="0.0.1",
-    author="Alex2772",
+    author="Mekakill",
     description="LLM character AI that interacts with the world through Telegram",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
