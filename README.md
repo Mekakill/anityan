@@ -1,6 +1,6 @@
-# kuni (くに)
+# Anityan
 
-LLM character AI. It interacts with the world through a text-based Telegram Client optimized for LLM (tdlib; not to be
+Local version Kuni - LLM character AI. It interacts with the world through a text-based Telegram Client optimized for LLM (tdlib; not to be
 confused with Telegram Bot API). It features RAG (persistent memory storage with ANN search) and nightly sanity
 checks.
 
